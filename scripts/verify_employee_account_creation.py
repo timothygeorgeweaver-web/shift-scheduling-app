@@ -47,11 +47,19 @@ def verify(test_db, test_dsn, identities, locations):
         guard, "current_database() <> " + literal(test_db), 1
     ).replace(":'migration_sha256'", literal(checksum))
 
-    admin(
-        "BEGIN; SET LOCAL ROLE shift_scheduling_owner;\n"
-        + migration + "\nCOMMIT;",
+    recorded = admin(
+        "SELECT sha256 FROM scheduling.schema_migration "
+        "WHERE version='0006_employee_account_creation';",
         test_db,
     )
+    if recorded:
+        require(recorded == checksum, "Applied account migration checksum differs.")
+    else:
+        admin(
+            "BEGIN; SET LOCAL ROLE shift_scheduling_owner;\n"
+            + migration + "\nCOMMIT;",
+            test_db,
+        )
 
     location = str(uuid4())
     employees = {key: str(uuid4()) for key in (
