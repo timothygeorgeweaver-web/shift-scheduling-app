@@ -72,7 +72,9 @@ def locations(token: str):
 def location_records(token: str, location_id, kind: str):
     queries = {
         "employees": """
-            SELECT id, display_name, active, revision FROM scheduling.employee
+            SELECT id, display_name, active, revision,
+                   (user_id IS NOT NULL) AS has_account
+            FROM scheduling.employee
             WHERE location_id = %s ORDER BY lower(display_name), id
         """,
         "roles": """

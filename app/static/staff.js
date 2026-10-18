@@ -70,8 +70,8 @@ export function createStaffManager({api, expired}) {
         const messages = {
           403: "You do not have permission for this action. Try signing in again.",
           404: "This record is no longer available. Refresh the Team screen.",
-          409: "Someone changed this record. Refresh before editing it again.",
-          422: "Check the name and try again.",
+          409: "This record changed, is already linked, or the email is in use. Refresh and check the details.",
+          422: "Check the form fields. Account passwords require 12–1,024 characters.",
         };
         throw new Error(messages[response.status] ||
           "The request could not be completed. Refresh before trying again.");
@@ -195,6 +195,52 @@ export function createStaffManager({api, expired}) {
       return form;
     }
 
+
+    function accountForm(employee) {
+      const form = document.createElement("form");
+      const fields = document.createElement("fieldset");
+      fields.append(element("legend", "Create employee sign-in"));
+      fields.append(element("p",
+        "Creates employee access only. Use a password of 12–1,024 characters.",
+        "description"));
+      const email = textInput();
+      email.type = "email";
+      email.maxLength = 254;
+      email.autocomplete = "off";
+      const password = textInput();
+      password.type = "password";
+      password.minLength = 12;
+      password.maxLength = 1024;
+      password.autocomplete = "new-password";
+      const confirm = password.cloneNode();
+      fields.append(field("Sign-in email", email),
+        field("Password", password), field("Confirm password", confirm),
+        submit("Create sign-in"));
+      form.append(fields);
+      confirm.addEventListener("input", () => confirm.setCustomValidity(""));
+      password.addEventListener("input", () => confirm.setCustomValidity(""));
+      form.addEventListener("submit", event => {
+        event.preventDefault();
+        if (busy) return;
+        if (password.value !== confirm.value) {
+          confirm.setCustomValidity("Passwords must match.");
+          confirm.reportValidity();
+          return;
+        }
+        const body = {
+          email: email.value.trim(),
+          password: password.value,
+          expected_revision: employee.revision,
+        };
+        password.value = "";
+        confirm.value = "";
+        run(() => save(
+          base() + "employees/" + employee.id + "/account", "POST", body
+        ));
+      });
+      return form;
+    }
+
     async function load() {
       const prefix = base();
       const [employees, roles, qualifications, history] = await Promise.all(
@@ -212,6 +258,15 @@ export function createStaffManager({api, expired}) {
         details.append(element("summary",
           employee.display_name + (employee.active ? "" : " · Inactive")));
         details.append(editForm(employee, "employees"));
+        const canAdmin = location.selectedOptions[0]?.dataset.admin === "true";
+        if (employee.has_account) {
+          details.append(element("p", "Employee sign-in is linked.", "description"));
+        } else if (canAdmin && employee.active) {
+          details.append(accountForm(employee));
+        } else if (canAdmin) {
+          details.append(element("p",
+            "Activate this employee before creating a sign-in.", "description"));
+        }
         const fields = document.createElement("fieldset");
         fields.append(element("legend", "Qualifications"));
         fields.append(element("p",
@@ -286,6 +341,9 @@ export function createStaffManager({api, expired}) {
       for (const item of locations) {
         const option = element("option", item.organization_name + " / " + item.name);
         option.value = item.id;
+        option.dataset.admin = String(identity.memberships.some(m =>
+          m.organization_id === item.organization_id &&
+          m.permissions.includes("administrator")));
         location.append(option);
       }
       if (locations.length) {

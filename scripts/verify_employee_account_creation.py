@@ -231,6 +231,9 @@ def verify(test_db, test_dsn, identities, locations):
             "Account function introduced broad runtime write access.",
         )
 
+    from scripts.verify_employee_account_api import verify as verify_api
+    verify_api(test_db, identities, location, employees["audit"])
+
     print("EMPLOYEE_ACCOUNT_CREATION_AND_LINKING=PASS")
     print("REAL_EMPLOYEE_SIGN_IN_AND_SIGN_OUT=PASS")
     print("ACCOUNT_FUNCTION_ADMINISTRATOR_ISOLATION=PASS")
