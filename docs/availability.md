@@ -1,44 +1,47 @@
-# Stage 2: employee availability
+# Stage 2 employee unavailability
 
-## Calendar and cutoff foundation
+## Approved input model
 
-The shared availability calendar implements the approved Monday week start
-and preceding-Monday 17:00 local cutoff. America/Los_Angeles is the pilot
-timezone. Cutoffs are converted to UTC after resolving the local date/time.
+Employees mark times they cannot work. No entries means fully available.
+The interface will use My Unavailability. Availability is derived as the
+complement of the effective blocked intervals.
 
-Week-start, cutoff-day offset and cutoff time are explicit policy inputs.
-The backend will load them from administrator-managed location settings.
-There is no browser or database policy editor in this foundation step.
+Date exceptions fully replace that date's blocked times, including overnight
+carry-in. Empty replacement means available all day; a full-day block means
+unavailable all day. Deleting the exception restores the recurring pattern.
 
-At the exact cutoff, editing is closed. Published weeks are locked even
-before cutoff. A configurable cutoff falling at a nonexistent or ambiguous
-DST wall time is rejected rather than silently shifted.
+Overnight entries require explicit ends next day. A date exception with an
+overnight block can carry into tomorrow, unless tomorrow has its own exception.
 
-This module evaluates only calendar/cutoff/publication gates. It does not
-authorize employee identity, check employee profile state, persist availability,
-or create schedule publication records. Those belong to the upcoming API and
-database transactions.
+## Implemented foundations
 
-## Remaining Stage 2 work
+The shared calendar uses the approved Monday week start and preceding-Monday
+17:00 cutoff. The policy is persisted and administrator-editable.
+The owner confirmed the policy browser tests passed.
 
-- Persist administrator-adjustable week/cutoff policy.
-- Identify the signed-in employee through a live, active profile link.
-- Store recurring availability with effective dates.
-- Store date-specific full replacement windows and unavailable-all-day.
-- Resolve effective availability by local calendar date.
-- Enforce cutoff and publication locks in write transactions.
-- Preserve locked availability against later recurring-pattern changes.
-- Add employee editing and effective-calendar browser screens.
-- Verify privacy, concurrency and the applicable V1 acceptance cases.
+The unavailability resolver works in local wall-clock minutes. It splits
+overnight entries at midnight, resolves date replacements, merges overlapping
+blocked portions, derives available intervals, and checks intersections.
+Intervals are half-open: a shift ending when a block begins does not overlap.
 
-The plan's proposed handling of missing availability and overnight window
-entry still needs to be resolved before those features are finalized.
+The resolver accepts a date-aware recurring-pattern loader so future storage
+can choose the correct effective-dated version for each origin date.
+It does not select or persist versions itself.
 
-## Saved policy implementation
+These are local calendar calculations, not the final timezone-aware shift
+eligibility service. Actual-instant conversion and DST shift cases remain
+part of the scheduling implementation.
 
-Migration 0009 persists week-start and cutoff settings on each location.
-An administrator-only API and Team form now edit these settings with audit
-and shared location revision checks. The database integration tests passed;
-browser verification remains pending. This completes policy persistence
-from the earlier remaining-work list. Employee availability storage and
-editing remain the next implementation slice.
+## Remaining implementation
+
+- Live, active signed-in employee profile selection and privacy enforcement.
+- Effective-dated recurring unavailability storage.
+- Date exception creation, editing, deletion and history.
+- Transactional cutoff/publication lock enforcement.
+- Preservation of locked dates and adjacent overnight portions.
+- Employee editing and effective-calendar browser screens.
+- Real PostgreSQL privacy, audit and concurrency certification.
+
+The V1 Word plan version 1.2 and decisions.md supersede earlier conflicting
+availability-input wording. Existing account and staff data are unchanged
+by the resolver implementation.

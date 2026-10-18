@@ -44,3 +44,26 @@ Publication locks the week even when its cutoff has not yet arrived.
 
 Configurable settings persistence and administrator controls will be added
 with availability. These defaults are approved; that UI is not yet built.
+
+## Unavailability model approved October 18, 2026
+
+Employees record times they cannot work. No entries means fully available.
+This supersedes the former proposal that missing availability means unavailable.
+
+Recurring blocks may contain multiple intervals. Overnight blocks require an
+explicit ends-next-day selection.
+
+A date-specific exception replaces all blocked portions on that local date,
+including carry-in from the previous day's overnight entry.
+- Empty replacement: available all day.
+- Full-day replacement: unavailable all day.
+- Delete the exception: restore the recurring pattern.
+An overnight date exception can carry into the following date unless that
+following date has its own replacement.
+
+A shift intersecting effective unavailability requires a scheduler warning
+override with a reason. No entered blocks alone never creates that warning.
+Qualification, overlap, rest and daily-hour rules remain independent.
+
+Cutoff and publication locks still apply. Later recurring edits must not
+retroactively alter locked dates. The current V1 Word plan is version 1.2.
