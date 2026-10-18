@@ -22,6 +22,9 @@ implementation interpretations and remain subject to owner correction.
 
 ## Initial technical implementation
 
-Python with FastAPI; PostgreSQL will be added in a subsequent step.
-The initial health endpoint reports liveness only.
+Python with FastAPI and PostgreSQL.
+The health endpoint reports liveness; readiness separately checks the database.
+Administrators manage accounts and business permissions. Schedulers manage
+staff and scheduling but cannot administer sign-ins or account permissions.
+Employee profile active status and business sign-in access are separate.
 Local development uses port 8010; this is not a production deployment.

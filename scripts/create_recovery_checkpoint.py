@@ -10,6 +10,8 @@ import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+from scripts.database_security_inventory import security_inventory
 SOURCE = "shift_scheduling"
 CLEAN_ENV = {"PATH": os.defpath, "LANG": "C.UTF-8"}
 
@@ -151,6 +153,7 @@ def fingerprint(database):
         "data": data,
         "table_privileges": privileges,
         "structure": structure,
+        "security": security_inventory(database, admin),
     }
 
 
@@ -176,10 +179,27 @@ def main():
     print("RECOVERY_DATABASE=" + recovery_database, flush=True)
 
     before = fingerprint(SOURCE)
+    migration_paths = sorted((ROOT / "migrations").glob("[0-9][0-9][0-9][0-9]_*.sql"))
+    require(len(migration_paths) == 7, "Expected seven reviewed migration files.")
+    expected_migrations = {
+        item.stem: hashlib.sha256(item.read_bytes()).hexdigest()
+        for item in migration_paths
+    }
+    recorded_migrations = json.loads(admin(
+        "SELECT json_object_agg(version,sha256) FROM scheduling.schema_migration;",
+        SOURCE,
+    ))
     require(
-        len(before["tables"]) == 10
-        and before["data"]["schema_migration"]["rows"] == 3,
-        "Unexpected baseline schema; preserve evidence and inspect.",
+        recorded_migrations == expected_migrations,
+        "Database migrations differ from the reviewed files.",
+    )
+    require(
+        {item["name"] for item in before["tables"]} == {
+            "schema_migration", "organization", "location", "app_user",
+            "organization_member", "member_permission", "employee",
+            "job_role", "employee_qualification", "auth_session", "audit_event",
+        },
+        "Unexpected baseline tables; preserve evidence and inspect.",
     )
 
     archive = destination / "database.dump"
@@ -201,6 +221,10 @@ def main():
     shutil.copyfile(ROOT / ".env", destination / "configuration.env")
     (destination / "configuration.env").chmod(0o600)
     shutil.copyfile(__file__, destination / "create_recovery_checkpoint.py")
+    shutil.copyfile(
+        ROOT / "scripts/database_security_inventory.py",
+        destination / "database_security_inventory.py",
+    )
 
     code_archive = destination / "repository.bundle"
     subprocess.run(
@@ -222,6 +246,27 @@ def main():
     admin(f"""
         REVOKE ALL ON DATABASE "{recovery_database}" FROM PUBLIC;
     """)
+
+    # A dump restored into a pre-created database does not copy database ACLs.
+    # Reproduce them only on this new recovery database.
+    database_grants = admin(f"""
+        SELECT coalesce(string_agg(format(
+            'SET ROLE %I; GRANT %s ON DATABASE %I TO %s%s; RESET ROLE;',
+            pg_get_userbyid(a.grantor),
+            a.privilege_type,
+            '{recovery_database}',
+            CASE WHEN a.grantee=0 THEN 'PUBLIC'
+                 ELSE quote_ident(pg_get_userbyid(a.grantee)) END,
+            CASE WHEN a.is_grantable THEN ' WITH GRANT OPTION' ELSE '' END
+        ), E'\\n' ORDER BY a.grantor,a.grantee,a.privilege_type),'')
+        FROM pg_database d
+        CROSS JOIN LATERAL aclexplode(
+            coalesce(d.datacl,acldefault('d',d.datdba))
+        ) a
+        WHERE d.datname=current_database();
+    """, SOURCE)
+    if database_grants:
+        admin("BEGIN;\n" + database_grants + "\nCOMMIT;")
 
     # Open the restricted archive as the current OS user and pass its
     # descriptor to pg_restore; postgres need not read the checkpoint folder.
@@ -267,6 +312,11 @@ def main():
         "source_database": SOURCE,
         "recovery_database": recovery_database,
         "table_count": len(before["tables"]),
+        "migration_checksums": expected_migrations,
+        "git_bundle_sha256": hashlib.sha256(code_archive.read_bytes()).hexdigest(),
+        "configuration_sha256": hashlib.sha256(
+            (destination / "configuration.env").read_bytes()
+        ).hexdigest(),
         "database_dump_sha256": hashlib.sha256(archive.read_bytes()).hexdigest(),
         "python_version": sys.version,
         "verified": [
@@ -275,6 +325,11 @@ def main():
             "table_ownership",
             "columns_constraints_indexes",
             "application_table_and_column_privileges",
+            "row_security_flags_and_policies",
+            "function_definitions_owners_and_execution_grants",
+            "database_schema_table_and_column_acls",
+            "application_role_attributes_and_memberships",
+            "migration_file_checksums",
             "source_database_unchanged",
             "git_bundle_integrity",
         ],
@@ -285,6 +340,8 @@ def main():
 
     print("INDEPENDENT_RESTORE=PASS")
     print("DATA_SCHEMA_AND_PRIVILEGES=PASS")
+    print("ROW_SECURITY_FUNCTIONS_AND_EXECUTION_GRANTS=PASS")
+    print("MIGRATION_FILE_CHECKSUMS=PASS")
     print("SOURCE_DATABASE_UNCHANGED=PASS")
     print("CODE_BUNDLE_INTEGRITY=PASS")
     print("RECOVERY_DATABASE_DEFAULT=READ_ONLY")

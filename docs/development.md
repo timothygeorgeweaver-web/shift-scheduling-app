@@ -25,5 +25,18 @@ The health endpoint checks application liveness, not database connectivity.
 
 ## Current scope
 
-Application skeleton only. Database, authentication, scheduling and
-persistent startup have not been implemented.
+The local application includes PostgreSQL, authentication, staff and role
+management, qualifications, employee account creation, and administrator access
+controls. Browser workflows have been manually verified.
+
+Scheduling and availability are not implemented yet. Persistent startup and
+hosted deployment remain pending. See stage_1_status.md for the current gaps.
+
+Run the database integration checks with the application stopped:
+
+    python -W error scripts/verify_staff_read_isolation.py
+
+The integration harness creates and removes a disposable database copy.
+Run pytest with warnings treated as errors:
+
+    python -W error -m pytest -q
