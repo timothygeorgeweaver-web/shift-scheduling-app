@@ -1,7 +1,7 @@
 fastapi
 uvicorn
 pytest
-httpx
+httpx2
 psycopg[binary]
 python-dotenv
 pwdlib[argon2]
