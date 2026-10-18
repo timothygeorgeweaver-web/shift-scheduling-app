@@ -11,7 +11,7 @@ Each checkpoint contains a custom database dump, restricted local configuration,
 a Git bundle, recovery tooling, verification inventories and a result report.
 These contain private data and credentials. Do not upload or commit them.
 
-The current baseline is eleven tables and nine reviewed migrations.
+The current baseline is fourteen tables and ten reviewed migrations.
 Database migration checksums must match the repository migration files.
 
 Every checkpoint restores independently into a new, uniquely named database.

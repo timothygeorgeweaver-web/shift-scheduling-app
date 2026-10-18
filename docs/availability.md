@@ -45,3 +45,11 @@ part of the scheduling implementation.
 The V1 Word plan version 1.2 and decisions.md supersede earlier conflicting
 availability-input wording. Existing account and staff data are unchanged
 by the resolver implementation.
+
+## Private storage and read API implementation
+
+Migration 0010 adds recurring versions, date replacement state and frozen
+day snapshots. Private employee profile/calendar read APIs are implemented
+and tested with real PostgreSQL data in a disposable database.
+Employee mutation endpoints, transactional lock enforcement and the browser
+editor remain next. No real employee unavailability records were seeded.

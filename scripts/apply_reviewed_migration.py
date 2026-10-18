@@ -18,7 +18,7 @@ def require(condition, message):
 def install(version, database, rehearse=False):
     require(version in (
         "0007_account_access_management", "0008_location_settings",
-        "0009_availability_policy"
+        "0009_availability_policy", "0010_private_unavailability_storage"
     ), "Unsupported migration.")
     require(
         database == "shift_scheduling"
@@ -65,6 +65,7 @@ def install(version, database, rehearse=False):
         "0009_availability_policy": ({"location"}, [
             "week_start", "availability_cutoff_days", "availability_cutoff_time"
         ]),
+        "0010_private_unavailability_storage": (set(), []),
     }[version]
     normalized_expression = "to_jsonb(t)-ARRAY[" + ",".join(
         "'" + key + "'" for key in removed_keys
@@ -87,6 +88,15 @@ def install(version, database, rehearse=False):
 
     admin(prefix + source + "\nCOMMIT;", database)
     after = fingerprint(database)
+    if version == "0010_private_unavailability_storage":
+        new_tables = {
+            "unavailability_recurring", "unavailability_exception",
+            "unavailability_day_lock",
+        }
+        require(set(after["data"])-set(before["data"]) == new_tables,
+                "Unexpected private-storage tables.")
+        require(all(after["data"][name]["rows"] == 0 for name in new_tables),
+                "Migration unexpectedly created employee records.")
     for table, value in before["data"].items():
         if table not in stripped | {"schema_migration"}:
             require(after["data"][table] == value,
@@ -107,6 +117,8 @@ def install(version, database, rehearse=False):
             "scheduling.edit_location_settings(uuid,integer,integer,text,text,text)",
         "0009_availability_policy":
             "scheduling.edit_availability_policy(uuid,integer,integer,integer,text)",
+        "0010_private_unavailability_storage":
+            "scheduling.read_my_unavailability(uuid,date,integer)",
     }[version]
     require(admin(f"""
         SELECT p.prosecdef

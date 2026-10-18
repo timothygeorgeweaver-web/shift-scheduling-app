@@ -164,6 +164,9 @@ def verify(test_db, identities, location):
         "DROP TRIGGER reject_policy_audit_test ON scheduling.audit_event;"
         "DROP FUNCTION scheduling.reject_policy_audit_test();", test_db,
     )
+    from scripts.verify_private_unavailability import verify as verify_private
+    verify_private(test_db, identities, location)
+
     print("SAVED_AVAILABILITY_POLICY_AND_CALENDAR_INTEGRATION=PASS")
     print("POLICY_AUTHORIZATION_CSRF_AND_VALIDATION=PASS")
     print("POLICY_SHARED_REVISION_AND_CONCURRENT_EDITS=PASS")

@@ -39,6 +39,8 @@ from app.settings_routes import router as settings_router
 app.include_router(settings_router)
 from app.availability_policy_routes import router as availability_policy_router
 app.include_router(availability_policy_router)
+from app.my_unavailability_routes import router as my_unavailability_router
+app.include_router(my_unavailability_router)
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
@@ -48,7 +50,7 @@ async def response_security_headers(request, call_next):
     response.headers.setdefault("X-Content-Type-Options", "nosniff")
     response.headers.setdefault("Referrer-Policy", "no-referrer")
     response.headers.setdefault("X-Frame-Options", "DENY")
-    if request.url.path.startswith(("/api/v1/auth", "/api/v1/staff")):
+    if request.url.path.startswith(("/api/v1/auth", "/api/v1/staff", "/api/v1/me")):
         response.headers["Cache-Control"] = "no-store"
     return response
 
