@@ -57,7 +57,25 @@ The runtime role can read authentication records and create/revoke sessions.
 It cannot modify users, permissions or employee records.
 Authentication tables have no generic CRUD endpoints.
 
-The login screen, staff administration, business-scoped authorization,
+Staff administration, business-scoped authorization,
 account recovery, account/membership deactivation integration checks,
 session-history retention, shared rate limiting and hosted transport
 configuration remain pending.
+
+
+## Browser interface
+
+The root URL serves a sign-in form and a signed-in account view.
+It supports existing-session lookup, sign-in and CSRF-protected sign-out.
+Credentials and CSRF tokens are not stored in browser localStorage.
+User data is inserted as text rather than HTML.
+The account view currently displays the first active business membership.
+
+JavaScript and CSS are served locally, with no external asset dependency.
+The HTML shell has a restrictive content security policy.
+Authentication responses, including errors, use Cache-Control no-store.
+Asset requests have an explicit version query; no service worker exists.
+
+Automated route tests verify shell/asset delivery and response headers.
+Real browser sign-in, refresh persistence and sign-out require manual checks.
+Employee and scheduler workflows are not yet implemented.
