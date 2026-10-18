@@ -164,6 +164,9 @@ def verify(test_db, identities, location):
             "SELECT scheduling.my_unavailability_profiles()"
         ).fetchone()[0] == [], "Missing session context exposed employee profiles.")
 
+    from scripts.verify_unavailability_writes import verify as verify_writes
+    verify_writes(test_db, identities, location, own, other)
+
     print("PRIVATE_EMPLOYEE_PROFILES_AND_CALENDAR_READS=PASS")
     print("STORED_RECURRENCE_DATE_REPLACEMENTS_AND_OVERNIGHT_RESOLUTION=PASS")
     print("FROZEN_DAY_PRECEDENCE_AND_EFFECTIVE_VERSIONS=PASS")

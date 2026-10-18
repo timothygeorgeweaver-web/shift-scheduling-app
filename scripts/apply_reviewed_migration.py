@@ -18,7 +18,8 @@ def require(condition, message):
 def install(version, database, rehearse=False):
     require(version in (
         "0007_account_access_management", "0008_location_settings",
-        "0009_availability_policy", "0010_private_unavailability_storage"
+        "0009_availability_policy", "0010_private_unavailability_storage",
+        "0011_employee_unavailability_writes"
     ), "Unsupported migration.")
     require(
         database == "shift_scheduling"
@@ -66,6 +67,7 @@ def install(version, database, rehearse=False):
             "week_start", "availability_cutoff_days", "availability_cutoff_time"
         ]),
         "0010_private_unavailability_storage": (set(), []),
+        "0011_employee_unavailability_writes": (set(), []),
     }[version]
     normalized_expression = "to_jsonb(t)-ARRAY[" + ",".join(
         "'" + key + "'" for key in removed_keys
@@ -119,6 +121,8 @@ def install(version, database, rehearse=False):
             "scheduling.edit_availability_policy(uuid,integer,integer,integer,text)",
         "0010_private_unavailability_storage":
             "scheduling.read_my_unavailability(uuid,date,integer)",
+        "0011_employee_unavailability_writes":
+            "scheduling.write_my_unavailability(uuid,text,date,integer,integer,jsonb)",
     }[version]
     require(admin(f"""
         SELECT p.prosecdef

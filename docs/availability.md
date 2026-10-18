@@ -53,3 +53,10 @@ day snapshots. Private employee profile/calendar read APIs are implemented
 and tested with real PostgreSQL data in a disposable database.
 Employee mutation endpoints, transactional lock enforcement and the browser
 editor remain next. No real employee unavailability records were seeded.
+
+## Controlled employee mutation APIs
+
+Migration 0011 adds employee-owned recurring and date-exception writes,
+cutoff/frozen-target denial, revision checks, private audit history and
+PostgreSQL concurrency/rollback certification.
+The browser editor and publication/snapshot creation remain pending.
