@@ -4,3 +4,4 @@ pytest
 httpx
 psycopg[binary]
 python-dotenv
+pwdlib[argon2]
