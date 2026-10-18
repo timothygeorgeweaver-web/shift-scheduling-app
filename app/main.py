@@ -27,6 +27,9 @@ from app.ui_routes import STATIC_DIR, router as ui_router
 
 app.include_router(auth_router)
 app.include_router(ui_router)
+
+from app.staff_routes import router as staff_router
+app.include_router(staff_router)
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
