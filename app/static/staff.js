@@ -70,7 +70,7 @@ export function createStaffManager({api, expired}) {
         const messages = {
           403: "You do not have permission for this action. Try signing in again.",
           404: "This record is no longer available. Refresh the Team screen.",
-          409: "This record changed, is already linked, or the email is in use. Refresh and check the details.",
+          409: "The record changed, account details conflict, or the last active administrator would be removed. Refresh and check the details.",
           422: "Check the form fields. Account passwords require 12–1,024 characters.",
         };
         throw new Error(messages[response.status] ||
@@ -241,6 +241,58 @@ export function createStaffManager({api, expired}) {
       return form;
     }
 
+
+    function accessControls(employee) {
+      const container = document.createElement("div");
+      const openerFields = document.createElement("fieldset");
+      const opener = element("button", "Manage sign-in access", "button secondary");
+      opener.type = "button";
+      openerFields.append(opener);
+      container.append(openerFields);
+      opener.addEventListener("click", () => run(async () => {
+        const path = base() + "employees/" + employee.id + "/account";
+        const account = await request(path);
+        if (!alive()) return;
+        const form = document.createElement("form");
+        const fields = document.createElement("fieldset");
+        fields.append(element("legend", "Sign-in access"));
+        fields.append(element("p", account.email, "description"));
+        fields.append(element("p",
+          "Access applies to this business. Saving signs this account out of all sessions.",
+          "description"));
+        const active = checkbox(account.active);
+        fields.append(field("Allow sign-in for this business", active));
+        const options = ["employee", "scheduler", "administrator"].map(permission => {
+          const input = checkbox(account.permissions.includes(permission));
+          fields.append(field(
+            permission[0].toUpperCase() + permission.slice(1), input));
+          return {permission, input};
+        });
+        if (!account.user_active) {
+          fields.append(element("p", "This account is globally disabled.", "description"));
+        }
+        fields.append(submit("Save access"));
+        form.append(fields);
+        form.addEventListener("submit", event => {
+          event.preventDefault();
+          const permissions = options.filter(item => item.input.checked)
+            .map(item => item.permission);
+          if (!permissions.length) {
+            status.textContent = "Select at least one permission.";
+            return;
+          }
+          run(() => save(path, "PATCH", {
+            expected_revision: account.revision,
+            active: active.checked,
+            permissions,
+          }));
+        });
+        container.replaceChildren(form);
+        status.textContent = "";
+      }));
+      return container;
+    }
+
     async function load() {
       const prefix = base();
       const [employees, roles, qualifications, history] = await Promise.all(
@@ -261,6 +313,7 @@ export function createStaffManager({api, expired}) {
         const canAdmin = location.selectedOptions[0]?.dataset.admin === "true";
         if (employee.has_account) {
           details.append(element("p", "Employee sign-in is linked.", "description"));
+          if (canAdmin) details.append(accessControls(employee));
         } else if (canAdmin && employee.active) {
           details.append(accountForm(employee));
         } else if (canAdmin) {

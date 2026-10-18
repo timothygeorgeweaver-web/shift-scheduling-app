@@ -155,6 +155,9 @@ def verify(test_db, identities, location, audit_employee):
             "/api/v1/auth/me"
         ).status_code == 401, "Employee session survived sign-out.")
 
+    from scripts.verify_account_management import verify as verify_management
+    verify_management(test_db, identities, location, employee, email, password)
+
     print("REAL_EMPLOYEE_ACCOUNT_API=PASS")
     print("ACCOUNT_API_CSRF_VALIDATION_AND_BUSINESS_ISOLATION=PASS")
     print("ACCOUNT_API_ATOMIC_ROLLBACK_AND_CONFLICTS=PASS")

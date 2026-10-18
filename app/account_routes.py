@@ -82,3 +82,70 @@ def create_employee_account(
                 ) from None
             raise
         return row["account"]
+
+
+from typing import Literal
+from fastapi import Request
+from pydantic import StrictBool
+from psycopg.types.json import Jsonb
+from app.auth_routes import _token
+
+
+class ChangeAccountAccess(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    expected_revision: StrictInt = Field(ge=1)
+    active: StrictBool
+    permissions: list[Literal["administrator", "scheduler", "employee"]] = Field(
+        min_length=1, max_length=3
+    )
+
+    @field_validator("permissions")
+    @classmethod
+    def unique_permissions(cls, value):
+        if len(value) != len(set(value)):
+            raise ValueError("Duplicate permissions.")
+        return sorted(value)
+
+
+def account_access_operation(token, location_id, employee_id, state=None):
+    with administrator_connection(
+        token, location_id, write=state is not None
+    ) as (conn, location, actor_id):
+        try:
+            result = conn.execute(
+                "SELECT scheduling.employee_account_access(%s,%s,%s::jsonb) AS account",
+                (location_id, employee_id, Jsonb(state) if state is not None else None),
+            ).fetchone()["account"]
+        except psycopg.Error as error:
+            statuses = {"40001": 409, "42501": 403, "P0002": 404, "22023": 422}
+            status = statuses.get(error.sqlstate)
+            if status:
+                raise HTTPException(
+                    status_code=status,
+                    detail=(
+                        "Access changed or this action would remove the last active "
+                        "administrator. Refresh and check the account."
+                        if status == 409 else "Account operation is unavailable."
+                    ),
+                ) from None
+            raise
+        return result
+
+
+@router.get("/locations/{location_id}/employees/{employee_id}/account")
+def read_employee_account(
+    location_id: UUID, employee_id: UUID,
+    token: str = Depends(_token),
+):
+    return account_access_operation(token, location_id, employee_id)
+
+
+@router.patch("/locations/{location_id}/employees/{employee_id}/account")
+def change_employee_account(
+    location_id: UUID, employee_id: UUID,
+    body: ChangeAccountAccess,
+    token: str = Depends(mutation_token),
+):
+    return account_access_operation(
+        token, location_id, employee_id, body.model_dump()
+    )
