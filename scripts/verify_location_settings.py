@@ -140,6 +140,9 @@ def verify(test_db, identities, location):
         "DROP TRIGGER reject_settings_audit_test ON scheduling.audit_event;"
         "DROP FUNCTION scheduling.reject_settings_audit_test();", test_db,
     )
+    from scripts.verify_availability_policy import verify as verify_policy
+    verify_policy(test_db, identities, location)
+
     print("BUSINESS_LOCATION_AND_TIMEZONE_SETTINGS=PASS")
     print("SETTINGS_AUTHORIZATION_CSRF_AND_VALIDATION=PASS")
     print("SETTINGS_STALE_AND_CONCURRENT_EDITS=PASS")

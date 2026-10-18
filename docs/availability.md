@@ -33,3 +33,12 @@ database transactions.
 
 The plan's proposed handling of missing availability and overnight window
 entry still needs to be resolved before those features are finalized.
+
+## Saved policy implementation
+
+Migration 0009 persists week-start and cutoff settings on each location.
+An administrator-only API and Team form now edit these settings with audit
+and shared location revision checks. The database integration tests passed;
+browser verification remains pending. This completes policy persistence
+from the earlier remaining-work list. Employee availability storage and
+editing remain the next implementation slice.

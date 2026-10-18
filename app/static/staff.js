@@ -341,6 +341,65 @@ export function createStaffManager({api, expired}) {
       return panel;
     }
 
+
+    function availabilityPolicyControls() {
+      const panel = document.createElement("details");
+      panel.append(element("summary", "Availability deadlines"));
+      const container = document.createElement("div");
+      const openerFields = document.createElement("fieldset");
+      const opener = element("button", "Edit availability policy", "button secondary");
+      opener.type = "button";
+      openerFields.append(opener);
+      container.append(openerFields);
+      panel.append(container);
+      opener.addEventListener("click", () => run(async () => {
+        const path = base() + "availability-policy";
+        const policy = await request(path);
+        if (!alive()) return;
+        const form = document.createElement("form");
+        const fields = document.createElement("fieldset");
+        fields.append(element("legend", "Availability deadlines"));
+        fields.append(element("p",
+          "All deadlines use " + policy.timezone + ".", "description"));
+        const weekday = document.createElement("select");
+        ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+          .forEach((name, index) => {
+            const option = element("option", name);
+            option.value = String(index);
+            weekday.append(option);
+          });
+        weekday.value = String(policy.week_start);
+        const days = textInput(String(policy.cutoff_days_before));
+        days.type = "number";
+        days.min = "0";
+        days.max = "365";
+        days.step = "1";
+        const clock = textInput(policy.cutoff_time);
+        clock.type = "time";
+        clock.step = "60";
+        fields.append(field("Scheduling week starts", weekday),
+          field("Cutoff days before the week starts", days),
+          field("Local cutoff time", clock));
+        fields.append(element("p",
+          "Default: Monday week start; availability closes the preceding Monday at 17:00.",
+          "description"));
+        fields.append(submit("Save availability policy"));
+        form.append(fields);
+        form.addEventListener("submit", event => {
+          event.preventDefault();
+          run(() => save(path, "PATCH", {
+            expected_revision: policy.revision,
+            week_start: Number(weekday.value),
+            cutoff_days_before: Number(days.value),
+            cutoff_time: clock.value,
+          }));
+        });
+        container.replaceChildren(form);
+        status.textContent = "";
+      }));
+      return panel;
+    }
+
     async function load() {
       const prefix = base();
       const [employees, roles, qualifications, history] = await Promise.all(
@@ -350,7 +409,7 @@ export function createStaffManager({api, expired}) {
       if (!alive()) return;
       const fragment = document.createDocumentFragment();
       if (location.selectedOptions[0]?.dataset.admin === "true") {
-        fragment.append(settingsControls());
+        fragment.append(settingsControls(), availabilityPolicyControls());
       }
       const columns = element("div", "", "team-columns");
       const staff = element("section");

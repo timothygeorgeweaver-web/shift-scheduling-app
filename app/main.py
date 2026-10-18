@@ -37,6 +37,8 @@ from app.account_routes import router as account_router
 app.include_router(account_router)
 from app.settings_routes import router as settings_router
 app.include_router(settings_router)
+from app.availability_policy_routes import router as availability_policy_router
+app.include_router(availability_policy_router)
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 

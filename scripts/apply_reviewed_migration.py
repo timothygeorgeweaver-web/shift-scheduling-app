@@ -17,7 +17,8 @@ def require(condition, message):
 
 def install(version, database, rehearse=False):
     require(version in (
-        "0007_account_access_management", "0008_location_settings"
+        "0007_account_access_management", "0008_location_settings",
+        "0009_availability_policy"
     ), "Unsupported migration.")
     require(
         database == "shift_scheduling"
@@ -58,17 +59,23 @@ def install(version, database, rehearse=False):
         "SET LOCAL ROLE shift_scheduling_owner;\n"
     )
 
-    stripped = (
-        {"organization_member"} if version.startswith("0007")
-        else {"organization", "location"}
-    )
+    stripped, removed_keys = {
+        "0007_account_access_management": ({"organization_member"}, ["revision"]),
+        "0008_location_settings": ({"organization", "location"}, ["revision"]),
+        "0009_availability_policy": ({"location"}, [
+            "week_start", "availability_cutoff_days", "availability_cutoff_time"
+        ]),
+    }[version]
+    normalized_expression = "to_jsonb(t)-ARRAY[" + ",".join(
+        "'" + key + "'" for key in removed_keys
+    ) + "]::text[]"
     before = fingerprint(database)
     normalized = {}
     for table in stripped:
         normalized[table] = admin(f"""
             SELECT md5(coalesce(string_agg(
-              (to_jsonb(t)-'revision')::text,E'\\n'
-              ORDER BY (to_jsonb(t)-'revision')::text COLLATE "C"
+              ({normalized_expression})::text,E'\\n'
+              ORDER BY ({normalized_expression})::text COLLATE "C"
             ),'')) FROM scheduling.{table} t;
         """, database)
 
@@ -87,17 +94,20 @@ def install(version, database, rehearse=False):
     for table, expected in normalized.items():
         actual = admin(f"""
             SELECT md5(coalesce(string_agg(
-              (to_jsonb(t)-'revision')::text,E'\\n'
-              ORDER BY (to_jsonb(t)-'revision')::text COLLATE "C"
+              ({normalized_expression})::text,E'\\n'
+              ORDER BY ({normalized_expression})::text COLLATE "C"
             ),'')) FROM scheduling.{table} t;
         """, database)
         require(actual == expected, "Existing records changed during migration.")
 
-    signature = (
-        "scheduling.employee_account_access(uuid,uuid,jsonb)"
-        if version.startswith("0007") else
-        "scheduling.edit_location_settings(uuid,integer,integer,text,text,text)"
-    )
+    signature = {
+        "0007_account_access_management":
+            "scheduling.employee_account_access(uuid,uuid,jsonb)",
+        "0008_location_settings":
+            "scheduling.edit_location_settings(uuid,integer,integer,text,text,text)",
+        "0009_availability_policy":
+            "scheduling.edit_availability_policy(uuid,integer,integer,integer,text)",
+    }[version]
     require(admin(f"""
         SELECT p.prosecdef
           AND pg_get_userbyid(p.proowner)='shift_scheduling_owner'
