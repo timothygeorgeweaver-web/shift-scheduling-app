@@ -30,6 +30,9 @@ app.include_router(ui_router)
 
 from app.staff_routes import router as staff_router
 app.include_router(staff_router)
+
+from app.staff_write_routes import router as staff_write_router
+app.include_router(staff_write_router)
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
@@ -39,7 +42,7 @@ async def response_security_headers(request, call_next):
     response.headers.setdefault("X-Content-Type-Options", "nosniff")
     response.headers.setdefault("Referrer-Policy", "no-referrer")
     response.headers.setdefault("X-Frame-Options", "DENY")
-    if request.url.path.startswith("/api/v1/auth"):
+    if request.url.path.startswith(("/api/v1/auth", "/api/v1/staff")):
         response.headers["Cache-Control"] = "no-store"
     return response
 

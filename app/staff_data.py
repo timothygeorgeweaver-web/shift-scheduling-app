@@ -10,9 +10,9 @@ from app.security import session_token_digest
 
 
 @contextmanager
-def staff_connection(token: str):
+def staff_connection(token: str, write: bool = False):
     with connection() as conn:
-        conn.read_only = True
+        conn.read_only = not write
         conn.row_factory = dict_row
         digest = session_token_digest(token)
         conn.execute(
@@ -72,15 +72,15 @@ def locations(token: str):
 def location_records(token: str, location_id, kind: str):
     queries = {
         "employees": """
-            SELECT id, display_name, active FROM scheduling.employee
+            SELECT id, display_name, active, revision FROM scheduling.employee
             WHERE location_id = %s ORDER BY lower(display_name), id
         """,
         "roles": """
-            SELECT id, name, active FROM scheduling.job_role
+            SELECT id, name, active, revision FROM scheduling.job_role
             WHERE location_id = %s ORDER BY lower(name), id
         """,
         "qualifications": """
-            SELECT employee_id, job_role_id, active
+            SELECT employee_id, job_role_id, active, revision
             FROM scheduling.employee_qualification
             WHERE location_id = %s ORDER BY employee_id, job_role_id
         """,

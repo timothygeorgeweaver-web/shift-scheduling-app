@@ -14,7 +14,8 @@ Each read uses a transaction-local session-token digest.
 PostgreSQL policies independently check the live session, account,
 membership and administrator/scheduler permission for each business.
 Missing context exposes no staff rows. Context resets after the transaction.
-The runtime role remains unable to create, edit or delete staff records.
+Runtime staff writes are business-scoped and audited by the editing services.
+Staff deletion remains prohibited.
 
 Authentication tables retain their restricted service-level access:
 they are not covered by the staff policies and have no generic CRUD API.
@@ -37,5 +38,5 @@ The original application database must remain unchanged.
 The temporary copy is dropped on success and retained on failure.
 Do not share retained database contents; the copy includes private data.
 
-Staff creation/editing, qualification management, audit events and
-the staff management interface are the next implementation slices.
+Staff editing, qualification management and history APIs are implemented.
+The browser staff management interface remains pending.

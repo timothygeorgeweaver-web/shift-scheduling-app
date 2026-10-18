@@ -196,6 +196,9 @@ def main():
                 "Session context leaked beyond its transaction.",
             )
 
+        from scripts.verify_staff_write_api import verify as verify_writes
+        verify_writes(test_db, test_dsn, identities, locations, employees, roles)
+
         # These mutations affect only synthetic identities in the copy.
         admin(f"""
             BEGIN;

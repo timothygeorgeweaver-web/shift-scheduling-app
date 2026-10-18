@@ -1,46 +1,60 @@
-# Staff change foundation
+# Staff editing
 
-Employees, job roles and qualifications now have positive revision numbers.
-Editing APIs must require the expected revision, lock the affected record,
-reject a mismatch and increment the revision atomically.
-The fields alone do not implement stale-edit rejection.
+Implemented APIs:
+- POST /api/v1/staff/locations/{location_id}/employees
+- PATCH /api/v1/staff/locations/{location_id}/employees/{employee_id}
+- POST /api/v1/staff/locations/{location_id}/roles
+- PATCH /api/v1/staff/locations/{location_id}/roles/{role_id}
+- PUT /api/v1/staff/locations/{location_id}/employees/{employee_id}/qualifications/{role_id}
+- GET /api/v1/staff/locations/{location_id}/history
 
-Audit events record business, location, actor, action, entity,
-before/after snapshots and timestamp.
-The application role can append and read authorized events.
-It cannot update or delete audit events.
-The actor must match the session used for the database transaction.
-Audit snapshots must exclude passwords, hashes and session secrets.
+Create requests accept name.
+Employee responses use display_name; role responses use name.
+Patch requests require expected_revision and name and/or active.
+Qualification requests require active and expected_revision.
+For a new qualification, expected_revision is zero.
+For an existing qualification, use its returned revision.
+Extra request fields are rejected.
 
-Database write policies use the same business-scoped staff permissions:
-administrators and schedulers can manage staff profiles and qualifications.
+Each mutation requires a signed-in staff session, a valid origin and
+X-CSRF-Token from the authenticated identity endpoint.
+Administrators and schedulers manage staff within their active businesses.
 Employee-only accounts cannot manage staff.
-Account creation and permission administration require their own design
-and authorization; these grants do not permit either.
+Account and permission administration remain separate, unimplemented APIs.
 
-Runtime column grants exclude employee IDs, ownership changes,
-employee-account linking and audit timestamp manipulation.
-Staff records are deactivated rather than deleted.
+Staff mutations lock the affected record, check the expected revision,
+increment it and append an audit event in one database transaction.
+Qualification changes also lock the employee to serialize first-time inserts.
+A stale revision returns HTTP 409; the client must refresh before retrying.
+Deactivation preserves records and qualification history.
+Eligibility must later evaluate employee, role and qualification active flags.
 
-Editing services must save the staff mutation and audit event in the
-same transaction. Database grants alone do not enforce that pairing.
-Mutation endpoints, CSRF checks, stale-edit handling, atomic audit
-verification and editing forms are the next slice.
+Audit events preserve actor, action, entity, before/after values and time.
+Audit snapshots contain only explicit staff fields, not credentials.
+The application role cannot update or delete audit history.
+Failed audits roll back the staff mutation.
+No staff deletion or ownership-changing endpoint is provided.
+
+History returns at most 100 events, newest first; default limit is 50.
+Staff API responses are marked no-store.
 
 ## Verification
 
-scripts/verify_staff_write_foundation.sql runs within an owner transaction.
-It switches to the runtime role to test permitted staff writes and denial of:
-- Cross-business writes and employee ownership changes.
-- Employee-only staff writes.
-- Invalid revision values.
-- Forged audit actors.
-- Audit updates and deletions.
-- Reads without session context.
+Run the full real-database harness with the app stopped:
 
-All fixtures are rolled back to a savepoint.
+    python -W error scripts/verify_staff_read_isolation.py
 
-The existing independently restored checkpoint remains the recovery point.
-It contains migration 0003; later committed migrations can be replayed.
-Update the checkpoint tool's baseline and security-object verification
-before creating the next checkpoint after these schema changes.
+It invokes scripts/verify_staff_write_api.py inside its temporary copy.
+Checks include create/edit/deactivate/reactivate, qualifications,
+CSRF and cross-business denial, stale revisions, two concurrent edits,
+audit actor/history checks and rejection of audit updates.
+
+A synthetic failing audit trigger is installed only in the temporary copy.
+The failed request must leave neither its staff record nor an audit event.
+The original application database must remain unchanged.
+The copy is removed on success and retained on failure.
+
+The browser staff management interface remains pending.
+The independently restored baseline checkpoint remains available.
+The recovery tool baseline/security-object checks must be updated
+before the next checkpoint for the expanded schema.
