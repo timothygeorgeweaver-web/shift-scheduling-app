@@ -55,3 +55,18 @@ database function, API, browser form and disposable-database integration tests.
 Migration 0008 is applied locally. Browser verification is still pending.
 This supersedes the earlier statement that editing location details depends
 entirely on setup tooling. Other listed gaps remain open.
+
+## Verified handoff to availability
+
+The owner confirmed all browser business/location settings checks passed,
+including persistence, invalid timezone rejection and audit history.
+Week-start and cutoff defaults have now been explicitly approved and are
+recorded in decisions.md.
+
+Stage 2 starts with shared calendar/cutoff logic. Existing-account profile
+linking and password recovery remain tracked limitations; the bootstrap
+administrator can administer the app without an employee profile.
+
+The checkpoint tool now targets eight migrations. The block creating this
+handoff refreshes the independently restored checkpoint; acceptance requires
+CHECKPOINT_RESULT=PASS in its output.
