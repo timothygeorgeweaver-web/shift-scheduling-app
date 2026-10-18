@@ -32,4 +32,16 @@ Never commit or paste .env or its contents.
 ## Current status
 
 Database and schema foundation only; no business tables yet.
-Application database integration and migrations are pending.
+Application connectivity is implemented; migrations are pending.
+
+
+## Connectivity checks
+
+/api/v1/health reports application liveness.
+/api/v1/ready checks PostgreSQL using a read-only SELECT.
+Readiness currently verifies connectivity, not business tables or migrations.
+A database failure returns HTTP 503 with a generic message.
+
+The application reads SHIFT_SCHEDULING_DATABASE_URL from the process
+environment first, then the project's .env file.
+Database passwords and raw driver errors are excluded from API responses.
