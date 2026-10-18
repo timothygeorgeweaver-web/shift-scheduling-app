@@ -26,6 +26,9 @@ def verify(test_db, test_dsn, identities, locations, employees, roles):
         and conninfo_to_dict(test_dsn).get("dbname") == test_db,
         "Write checks must target the disposable database.",
     )
+    from scripts.verify_account_access import verify as verify_account_access
+    verify_account_access(test_db, identities, locations)
+
     base = "/api/v1/staff/locations/" + locations["a"]
     token = identities["admin_a"]["token"]
 
