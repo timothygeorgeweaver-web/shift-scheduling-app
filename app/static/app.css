@@ -91,3 +91,35 @@ footer { padding: 16px 24px 26px; text-align: center; font-size: 12px; color: va
   .card { padding: 28px 24px; border-radius: 14px; }
   h1 { font-size: 29px; }
 }
+
+.account-card:has(.team:not([hidden])) { max-width: 1120px; }
+.team { margin-top: 36px; border-top: 1px solid var(--border); padding-top: 28px; }
+.team h2 { margin: 0 0 10px; font-size: 26px; }
+.team h3 { margin: 22px 0 14px; }
+.team-status { min-height: 24px; color: var(--accent); overflow-wrap: anywhere; }
+.team fieldset {
+  min-width: 0; margin: 12px 0; padding: 16px;
+  border: 1px solid var(--border); border-radius: 9px;
+}
+.team legend { font-size: 13px; font-weight: 650; padding: 0 6px; }
+.team label { margin: 12px 0; }
+.team label input { margin-top: 8px; }
+.team input[type="checkbox"] {
+  width: 20px; height: 20px; min-height: 0; padding: 0;
+  margin: 0 0 0 12px; vertical-align: middle; accent-color: var(--accent);
+}
+.team select {
+  max-width: 100%; min-height: 44px; padding: 10px;
+  border: 1px solid var(--border); border-radius: 8px;
+  font: inherit; background: white; color: inherit;
+}
+.team select:focus-visible { outline: 3px solid #70b9aa; outline-offset: 3px; }
+.team-controls { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.team-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+.team-columns > section { min-width: 0; }
+.team details { margin: 14px 0; padding: 14px; border: 1px solid var(--border); border-radius: 9px; }
+.team summary { cursor: pointer; font-weight: 650; overflow-wrap: anywhere; }
+.team li { margin: 12px 0; font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
+@media (max-width: 740px) {
+  .team-columns { grid-template-columns: 1fr; gap: 8px; }
+}

@@ -1,0 +1,301 @@
+"use strict";
+
+export function createStaffManager({api, expired}) {
+  const root = document.createElement("section");
+  root.className = "team";
+  root.hidden = true;
+  document.getElementById("account-view").append(root);
+  let generation = 0;
+
+  function element(tag, text = "", className = "") {
+    const node = document.createElement(tag);
+    node.textContent = text;
+    node.className = className;
+    return node;
+  }
+
+  function reset() {
+    generation += 1;
+    root.replaceChildren();
+    root.hidden = true;
+  }
+
+  function start(identity) {
+    reset();
+    if (!identity.memberships.some(m =>
+      m.permissions.some(p => ["administrator", "scheduler"].includes(p)))) return;
+
+    const current = generation;
+    const alive = () => generation === current;
+    const token = identity.csrf_token;
+    root.hidden = false;
+
+    root.append(element("h2", "Team"));
+    root.append(element("p",
+      "Manage employees, job roles, and role qualifications.",
+      "description"));
+
+    const status = element("p", "", "team-status");
+    status.setAttribute("role", "status");
+    root.append(status);
+
+    const controls = element("fieldset", "", "team-controls");
+    const legend = element("legend", "Location");
+    controls.append(legend);
+    const location = document.createElement("select");
+    location.setAttribute("aria-label", "Location");
+    const refresh = element("button", "Refresh", "button secondary");
+    refresh.type = "button";
+    controls.append(location, refresh);
+    root.append(controls);
+
+    const content = element("div");
+    root.append(content);
+    let busy = false;
+
+    async function request(path, method = "GET", body) {
+      const response = await api("/api/v1/staff/" + path, {
+        method,
+        ...(body === undefined ? {} : {
+          headers: {"Content-Type": "application/json", "X-CSRF-Token": token},
+          body: JSON.stringify(body),
+        }),
+      });
+      if (!alive()) throw new Error("Session changed.");
+      if (response.status === 401) {
+        expired();
+        throw new Error("Please sign in again.");
+      }
+      if (!response.ok) {
+        const messages = {
+          403: "You do not have permission for this action. Try signing in again.",
+          404: "This record is no longer available. Refresh the Team screen.",
+          409: "Someone changed this record. Refresh before editing it again.",
+          422: "Check the name and try again.",
+        };
+        throw new Error(messages[response.status] ||
+          "The request could not be completed. Refresh before trying again.");
+      }
+      return response.json();
+    }
+
+    function lock(value) {
+      busy = value;
+      controls.disabled = value;
+      content.querySelectorAll("fieldset").forEach(node => {
+        node.disabled = value;
+      });
+    }
+
+    async function run(work) {
+      if (busy || !alive()) return;
+      lock(true);
+      status.textContent = "Working…";
+      try {
+        await work();
+      } catch (error) {
+        if (alive()) status.textContent =
+          error instanceof TypeError || error.name === "AbortError"
+            ? "Connection interrupted. Refresh to check whether your change saved."
+            : error.message;
+      } finally {
+        if (alive()) lock(false);
+      }
+    }
+
+    function base() {
+      return "locations/" + encodeURIComponent(location.value) + "/";
+    }
+
+    function field(labelText, input) {
+      const label = element("label", labelText);
+      label.append(input);
+      return label;
+    }
+
+    function textInput(value = "") {
+      const input = document.createElement("input");
+      input.type = "text";
+      input.maxLength = 200;
+      input.required = true;
+      input.value = value;
+      return input;
+    }
+
+    function checkbox(value) {
+      const input = document.createElement("input");
+      input.type = "checkbox";
+      input.checked = value;
+      return input;
+    }
+
+    function submit(text) {
+      const button = element("button", text, "button secondary");
+      button.type = "submit";
+      return button;
+    }
+
+    async function save(path, method, body) {
+      await request(path, method, body);
+      // Clear stale revision controls as soon as a write is confirmed.
+      content.replaceChildren();
+      status.textContent = "Saved. Refreshing…";
+      try {
+        await load();
+        if (alive()) status.textContent = "Saved.";
+      } catch {
+        if (alive()) status.textContent =
+          "Saved, but the list could not refresh. Select Refresh to continue.";
+      }
+    }
+
+    function addForm(kind, heading) {
+      const form = document.createElement("form");
+      const fields = document.createElement("fieldset");
+      fields.append(element("legend", heading));
+      const name = textInput();
+      fields.append(field("Name", name), submit("Add"));
+      form.append(fields);
+      form.addEventListener("submit", event => {
+        event.preventDefault();
+        if (!name.value.trim()) {
+          name.setCustomValidity("Enter a name.");
+          name.reportValidity();
+          return;
+        }
+        run(() => save(base() + kind, "POST", {name: name.value.trim()}));
+      });
+      name.addEventListener("input", () => name.setCustomValidity(""));
+      return form;
+    }
+
+    function editForm(record, kind) {
+      const form = document.createElement("form");
+      const fields = document.createElement("fieldset");
+      fields.append(element("legend", "Edit details"));
+      const name = textInput(record.display_name ?? record.name);
+      const active = checkbox(record.active);
+      fields.append(field("Name", name), field("Active", active),
+        submit("Save details"));
+      form.append(fields);
+      form.addEventListener("submit", event => {
+        event.preventDefault();
+        if (!name.value.trim()) {
+          name.setCustomValidity("Enter a name.");
+          name.reportValidity();
+          return;
+        }
+        run(() => save(base() + kind + "/" + record.id, "PATCH", {
+          expected_revision: record.revision,
+          name: name.value.trim(),
+          active: active.checked,
+        }));
+      });
+      name.addEventListener("input", () => name.setCustomValidity(""));
+      return form;
+    }
+
+    async function load() {
+      const prefix = base();
+      const [employees, roles, qualifications, history] = await Promise.all(
+        ["employees", "roles", "qualifications", "history?limit=20"]
+          .map(path => request(prefix + path))
+      );
+      if (!alive()) return;
+      const fragment = document.createDocumentFragment();
+      const columns = element("div", "", "team-columns");
+      const staff = element("section");
+      staff.append(element("h3", "Employees"), addForm("employees", "Add employee"));
+      if (!employees.length) staff.append(element("p", "No employees added yet."));
+      for (const employee of employees) {
+        const details = document.createElement("details");
+        details.append(element("summary",
+          employee.display_name + (employee.active ? "" : " · Inactive")));
+        details.append(editForm(employee, "employees"));
+        const fields = document.createElement("fieldset");
+        fields.append(element("legend", "Qualifications"));
+        fields.append(element("p",
+          "Each checkbox change saves immediately.", "description"));
+        if (!roles.length) fields.append(element("p", "Add a job role first."));
+        for (const role of roles) {
+          const qualification = qualifications.find(q =>
+            q.employee_id === employee.id && q.job_role_id === role.id);
+          const input = checkbox(qualification?.active ?? false);
+          fields.append(field(role.name + (role.active ? "" : " · Inactive role"), input));
+          input.addEventListener("change", () => {
+            const selected = input.checked;
+            input.checked = qualification?.active ?? false;
+            run(() => save(
+              prefix + "employees/" + employee.id + "/qualifications/" + role.id,
+              "PUT", {
+                expected_revision: qualification?.revision ?? 0,
+                active: selected,
+              }
+            ));
+          });
+        }
+        details.append(fields);
+        staff.append(details);
+      }
+      const jobs = element("section");
+      jobs.append(element("h3", "Job roles"), addForm("roles", "Add job role"));
+      if (!roles.length) jobs.append(element("p", "No job roles added yet."));
+      for (const role of roles) {
+        const details = document.createElement("details");
+        details.append(element("summary",
+          role.name + (role.active ? "" : " · Inactive")));
+        details.append(editForm(role, "roles"));
+        jobs.append(details);
+      }
+      columns.append(staff, jobs);
+      fragment.append(columns);
+
+      const changes = document.createElement("details");
+      changes.append(element("summary", "Recent changes"));
+      const list = document.createElement("ol");
+      for (const event of history) {
+        const after = event.after_data;
+        const employee = employees.find(e => e.id === after.employee_id);
+        const role = roles.find(r => r.id === after.job_role_id);
+        const subject = after.display_name ?? after.name ??
+          [employee?.display_name, role?.name].filter(Boolean).join(" / ");
+        const time = new Date(event.created_at).toLocaleString();
+        list.append(element("li",
+          `${time} — ${event.action}: ${subject || "Staff record"} (revision ${after.revision})`));
+      }
+      if (!history.length) changes.append(element("p", "No changes recorded yet."));
+      changes.append(list);
+      fragment.append(changes);
+      content.replaceChildren(fragment);
+    }
+
+    refresh.addEventListener("click", () => run(async () => {
+      await load();
+      status.textContent = "Up to date.";
+    }));
+    location.addEventListener("change", () => {
+      content.replaceChildren();
+      run(async () => {
+        await load();
+        status.textContent = "";
+      });
+    });
+
+    run(async () => {
+      const locations = await request("locations");
+      for (const item of locations) {
+        const option = element("option", item.organization_name + " / " + item.name);
+        option.value = item.id;
+        location.append(option);
+      }
+      if (locations.length) {
+        await load();
+        status.textContent = "";
+      } else {
+        status.textContent = "No accessible locations.";
+      }
+    });
+  }
+
+  return {start, reset};
+}

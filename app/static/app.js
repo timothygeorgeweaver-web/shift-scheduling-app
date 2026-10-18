@@ -1,8 +1,11 @@
+import {createStaffManager} from "/static/staff.js?v=1";
+
 (() => {
   "use strict";
 
   const byId = (id) => document.getElementById(id);
   let csrfToken = "";
+  const staff = createStaffManager({api, expired: () => showLogin("Your session ended. Please sign in again.")});
 
   function message(id, text) {
     byId(id).textContent = text;
@@ -10,6 +13,7 @@
   }
 
   function showLogin(text = "") {
+    staff.reset();
     csrfToken = "";
     byId("loading").hidden = true;
     byId("account-view").hidden = true;
@@ -46,6 +50,7 @@
     byId("logout-button").hidden = false;
     byId("password").value = "";
     message("account-message", "");
+    staff.start(identity);
   }
 
   async function api(path, options = {}) {
