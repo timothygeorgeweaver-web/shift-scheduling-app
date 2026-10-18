@@ -136,7 +136,11 @@ export function createStaffManager({api, expired}) {
     }
 
     async function save(path, method, body) {
-      await request(path, method, body);
+      const saved = await request(path, method, body);
+      if (path.endsWith("/settings") && alive()) {
+        location.selectedOptions[0].textContent =
+          saved.business_name + " / " + saved.location_name;
+      }
       // Clear stale revision controls as soon as a write is confirmed.
       content.replaceChildren();
       status.textContent = "Saved. Refreshing…";
@@ -293,6 +297,50 @@ export function createStaffManager({api, expired}) {
       return container;
     }
 
+
+    function settingsControls() {
+      const panel = document.createElement("details");
+      panel.append(element("summary", "Business and location settings"));
+      const container = document.createElement("div");
+      const openerFields = document.createElement("fieldset");
+      const opener = element("button", "Edit settings", "button secondary");
+      opener.type = "button";
+      openerFields.append(opener);
+      container.append(openerFields);
+      panel.append(container);
+      opener.addEventListener("click", () => run(async () => {
+        const path = base() + "settings";
+        const settings = await request(path);
+        if (!alive()) return;
+        const form = document.createElement("form");
+        const fields = document.createElement("fieldset");
+        fields.append(element("legend", "Business and location"));
+        const business = textInput(settings.business_name);
+        const name = textInput(settings.location_name);
+        const timezone = textInput(settings.timezone);
+        timezone.maxLength = 100;
+        fields.append(field("Business name", business),
+          field("Location name", name), field("Timezone", timezone));
+        fields.append(element("p",
+          "Pacific time: America/Los_Angeles", "description"));
+        fields.append(submit("Save settings"));
+        form.append(fields);
+        form.addEventListener("submit", event => {
+          event.preventDefault();
+          run(() => save(path, "PATCH", {
+            expected_organization_revision: settings.organization_revision,
+            expected_location_revision: settings.location_revision,
+            business_name: business.value.trim(),
+            location_name: name.value.trim(),
+            timezone: timezone.value.trim(),
+          }));
+        });
+        container.replaceChildren(form);
+        status.textContent = "";
+      }));
+      return panel;
+    }
+
     async function load() {
       const prefix = base();
       const [employees, roles, qualifications, history] = await Promise.all(
@@ -301,6 +349,9 @@ export function createStaffManager({api, expired}) {
       );
       if (!alive()) return;
       const fragment = document.createDocumentFragment();
+      if (location.selectedOptions[0]?.dataset.admin === "true") {
+        fragment.append(settingsControls());
+      }
       const columns = element("div", "", "team-columns");
       const staff = element("section");
       staff.append(element("h3", "Employees"), addForm("employees", "Add employee"));

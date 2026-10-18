@@ -1,4 +1,4 @@
-import {createStaffManager} from "/static/staff.js?v=3";
+import {createStaffManager} from "/static/staff.js?v=4";
 
 (() => {
   "use strict";

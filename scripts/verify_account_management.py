@@ -28,6 +28,8 @@ def verify(test_db, identities, location, employee, email, password):
         "Account access tests must use the disposable database.",
     )
     install(test_db)
+    from scripts.verify_location_settings import verify as verify_settings
+    verify_settings(test_db, identities, location)
     prefix = "/api/v1/staff/locations/" + location + "/employees/"
     url = prefix + employee + "/account"
     admin_token = identities["admin_a"]["token"]

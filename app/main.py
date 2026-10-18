@@ -35,6 +35,8 @@ from app.staff_write_routes import router as staff_write_router
 app.include_router(staff_write_router)
 from app.account_routes import router as account_router
 app.include_router(account_router)
+from app.settings_routes import router as settings_router
+app.include_router(settings_router)
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 

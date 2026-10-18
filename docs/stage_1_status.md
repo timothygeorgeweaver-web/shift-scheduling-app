@@ -47,3 +47,11 @@ full scheduling pilot remain later operational work.
 
 Stage 1 is not marked complete. Remaining administration work must be
 resolved explicitly; successful staff/account tests do not close those gaps.
+
+## Location administration implementation update
+
+Business/location name and timezone administration now have a controlled
+database function, API, browser form and disposable-database integration tests.
+Migration 0008 is applied locally. Browser verification is still pending.
+This supersedes the earlier statement that editing location details depends
+entirely on setup tooling. Other listed gaps remain open.
