@@ -199,6 +199,9 @@ def main():
         from scripts.verify_staff_write_api import verify as verify_writes
         verify_writes(test_db, test_dsn, identities, locations, employees, roles)
 
+        from scripts.verify_employee_account_creation import verify as verify_accounts
+        verify_accounts(test_db, test_dsn, identities, locations)
+
         # These mutations affect only synthetic identities in the copy.
         admin(f"""
             BEGIN;
