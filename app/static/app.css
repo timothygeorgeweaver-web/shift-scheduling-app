@@ -123,3 +123,21 @@ footer { padding: 16px 24px 26px; text-align: center; font-size: 12px; color: va
 @media (max-width: 740px) {
   .team-columns { grid-template-columns: 1fr; gap: 8px; }
 }
+
+.account-card:has(.unavailability) { max-width: 1120px; }
+.unavailability p { font-size: 14px; line-height: 1.6; overflow-wrap: anywhere; }
+.unavailability-day {
+  padding: 18px 0; border-top: 1px solid var(--border);
+}
+.unavailability-day h3 { margin-top: 4px; }
+.unavailability-row {
+  display: grid; grid-template-columns: 1fr 1.5fr;
+  align-items: end; gap: 12px; padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+.unavailability-row label { min-width: 0; }
+.unavailability-row input { max-width: 100%; }
+.unavailability form { margin-top: 24px; }
+@media (max-width: 620px) {
+  .unavailability-row { grid-template-columns: 1fr; }
+}

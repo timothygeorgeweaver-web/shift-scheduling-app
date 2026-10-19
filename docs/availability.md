@@ -60,3 +60,29 @@ Migration 0011 adds employee-owned recurring and date-exception writes,
 cutoff/frozen-target denial, revision checks, private audit history and
 PostgreSQL concurrency/rollback certification.
 The browser editor and publication/snapshot creation remain pending.
+
+## Employee browser editor
+
+My Unavailability is connected to signed-in account lifecycle and private APIs.
+It lists only linked active employee profiles, displays seven effective local
+dates, and supports recurring-pattern edits and date replacements.
+
+Date replacement choices are custom blocked times, available all day,
+unavailable all day, and removal of the replacement to restore recurrence.
+Overnight intervals require explicit Ends next day. End time 24:00 denotes
+same-day midnight. The UI displays location timezone and server cutoff/lock
+state. No entries display as Available all day.
+
+Recurring edits start at the calendar's selected first date. The editor loads
+a complete seven-day recurring version. If an effective-dated version boundary
+falls inside the selected range, the user must select seven dates within one
+version before editing; the editor does not combine different saved patterns.
+
+Forms retain the loaded pattern/exception and location revisions. Conflicts,
+locked dates and uncertain save outcomes require closing and refreshing.
+Navigation is disabled during editing. Sign-out removes the private view;
+late responses from a prior account are ignored. No browser storage is used.
+
+Automated regression and asset-serving checks accompany this change.
+Real browser verification remains pending. Publication/snapshot creation
+and scheduler-facing availability integration remain pending.

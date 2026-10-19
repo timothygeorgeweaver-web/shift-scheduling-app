@@ -1,10 +1,14 @@
 import {createStaffManager} from "/static/staff.js?v=5";
+import {createUnavailabilityManager} from "/static/unavailability.js?v=1";
 
 (() => {
   "use strict";
 
   const byId = (id) => document.getElementById(id);
   let csrfToken = "";
+  const unavailability = createUnavailabilityManager({
+    api, expired: () => showLogin("Your session ended. Please sign in again.")
+  });
   const staff = createStaffManager({api, expired: () => showLogin("Your session ended. Please sign in again.")});
 
   function message(id, text) {
@@ -14,6 +18,7 @@ import {createStaffManager} from "/static/staff.js?v=5";
 
   function showLogin(text = "") {
     staff.reset();
+    unavailability.reset();
     csrfToken = "";
     byId("loading").hidden = true;
     byId("account-view").hidden = true;
@@ -51,6 +56,7 @@ import {createStaffManager} from "/static/staff.js?v=5";
     byId("password").value = "";
     message("account-message", "");
     staff.start(identity);
+    unavailability.start(identity);
   }
 
   async function api(path, options = {}) {
