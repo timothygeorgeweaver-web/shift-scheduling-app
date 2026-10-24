@@ -86,3 +86,30 @@ late responses from a prior account are ignored. No browser storage is used.
 Automated regression and asset-serving checks accompany this change.
 Real browser verification remains pending. Publication/snapshot creation
 and scheduler-facing availability integration remain pending.
+
+## Planner redesign foundation
+
+The approved planner redesign uses exact 15-minute local-day cells:
+0 through 95, covering 00:00 through 24:00.
+
+app/planner_logic.py implements:
+- Strict cell validation and exact conversion to merged minute intervals.
+- Reversible single-cell toggles.
+- Blank weekly mass-edit templates.
+- Inclusive date-range additive previews.
+- Preservation of existing blocks and independent date edits.
+- Reporting locked matching dates without changing them.
+- Idempotent effective results when the same additions are applied again.
+
+Non-quarter-hour input is rejected rather than silently rounded.
+Overnight portions belong to their actual dates and cannot spill outside
+the selected mass-edit range.
+
+This is pure domain logic, not an authorized save operation. The database
+service must enforce live identity, cutoff/publication state, revisions,
+preview-to-commit consistency, atomic multi-date writes and audit history.
+A client-provided preview is never sufficient authority to write.
+
+The existing form editor and legacy persistence remain connected for now.
+The new planner screen and date-based transaction service are pending.
+No database records are changed by this foundation step.
