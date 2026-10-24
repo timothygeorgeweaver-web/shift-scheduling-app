@@ -40,7 +40,18 @@ export function createScheduleManager({api, expired}) {
 
     const form = node("form", "", panel);
     const fields = node("fieldset", "", form);
-    node("legend", "Create blank week", fields);
+    const formTitle = node("legend", "Create blank week", fields);
+    const copyNotice = node("p", "", fields);
+    copyNotice.setAttribute("role", "status");
+    copyNotice.hidden = true;
+    const cancelCopy = action("Cancel copying", fields, () => {
+      if (busy) return;
+      copySource = null;
+      updateCopyMode();
+      if (ready) renderCalendar();
+      say("Copying cancelled. You can create a blank week.");
+    });
+    cancelCopy.hidden = true;
     const policy = node("p", "", fields);
     const navigation = node("div", "", fields);
     navigation.className = "planner-navigation";
@@ -55,6 +66,7 @@ export function createScheduleManager({api, expired}) {
 
     let month = new Date().toISOString().slice(0, 7);
     let state = null, selected = "", busy = false, ready = false;
+    let copySource = null;
     const shifts = createShiftEditor({
       api, expired, identity, parent: panel,
       onOpen(open) {
@@ -70,6 +82,16 @@ export function createScheduleManager({api, expired}) {
     const say = text => { if (active()) status.textContent = text; };
     const url = () => "/api/v1/staff/locations/" +
       encodeURIComponent(select.value) + "/schedule-weeks";
+
+    function updateCopyMode() {
+      formTitle.textContent = copySource ? "Copy schedule week" : "Create blank week";
+      create.textContent = copySource ? "Copy week" : "Create blank week";
+      copyNotice.hidden = cancelCopy.hidden = !copySource;
+      copyNotice.textContent = copySource
+        ? `Copying ${copySource.week_start_date} – ${addDays(copySource.week_start_date, 6)}. ` +
+          "Choose an unused destination week. All copied shifts will be unassigned."
+        : "";
+    }
 
     function adjacentMonth(value, count) {
       const date = new Date(value + "-01T12:00:00Z");
@@ -105,11 +127,13 @@ export function createScheduleManager({api, expired}) {
         throw new Error("Please sign in again.");
       }
       if (!response.ok) {
+        const failure = await response.json().catch(() => null);
         const error = new Error(
           response.status === 409
             ? "A schedule already covers those dates, or workplace settings changed."
             : response.status === 422
-            ? "Check the selected week and workplace settings."
+            ? (typeof failure?.detail === "string" ? failure.detail :
+               "Check the selected week and workplace settings.")
             : response.status === 403 || response.status === 404
             ? "Schedule access is unavailable for this workplace."
             : "The request was not confirmed. Refresh the calendar before trying again."
@@ -239,6 +263,7 @@ export function createScheduleManager({api, expired}) {
       policy.textContent = `Weeks begin ${names[state.location.week_start_day]}. Times use ${state.location.timezone}. Dates with an existing schedule cannot be selected.`;
       ready = true;
       renderCalendar();
+      updateCopyMode();
 
       const visible = state.weeks.filter(week =>
         week.week_start_date <= last && addDays(week.week_start_date, 6) >= first
@@ -255,25 +280,48 @@ export function createScheduleManager({api, expired}) {
           action("Open week", item, () => {
             if (!busy) shifts.open(select.value, week.id);
           });
+          action("Copy this week", item, () => {
+            if (busy || !ready) return;
+            copySource = {...week};
+            renderCalendar();
+            updateCopyMode();
+            say("Choose an available destination date, then click Copy week.");
+            fields.scrollIntoView({block: "start", behavior: "smooth"});
+          });
         }
       }
       say("Choose an available week-start date.");
     }
 
     action("Refresh calendar", controls, () => task(load));
-    select.addEventListener("change", () => task(load));
+    select.addEventListener("change", () => {
+      copySource = null;
+      updateCopyMode();
+      task(load);
+    });
 
     form.addEventListener("submit", event => {
       event.preventDefault();
       if (busy || !validSelection()) return;
       const chosen = selected;
+      const sourceWeek = copySource ? {...copySource} : null;
+      if (sourceWeek && !window.confirm(
+        `Copy ${sourceWeek.week_start_date} – ${addDays(sourceWeek.week_start_date, 6)} ` +
+        `to ${chosen} – ${addDays(chosen, 6)}?\n` +
+        "This creates a new draft with unassigned shifts. The source stays unchanged."
+      )) return;
+
       const payload = {
         week_start_date: chosen,
-        expected_location_revision: state.location.revision
+        expected_location_revision: state.location.revision,
+        ...(sourceWeek ? {expected_source_revision: sourceWeek.revision} : {})
       };
+      const destination = url() + (sourceWeek
+        ? "/" + encodeURIComponent(sourceWeek.id) + "/copy" : "");
+
       task(async () => {
         try {
-          const created = await request(url(), {
+          const result = await request(destination, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -281,12 +329,17 @@ export function createScheduleManager({api, expired}) {
             },
             body: JSON.stringify(payload)
           });
+          const created = result.week ?? result;
+          copySource = null;
           await load();
-          say(`Created draft week ${created.week_start_date} – ${addDays(created.week_start_date, 6)}.`);
+          say(`${sourceWeek ? "Copied" : "Created"} draft week ` +
+            `${created.week_start_date} – ${addDays(created.week_start_date, 6)}.`);
         } catch (error) {
           if (error.status === 409) {
+            copySource = null;
             await load();
-            say("The calendar was refreshed because that week or workplace settings changed. Choose another available date.");
+            say("The source, destination or workplace settings changed. " +
+              "The calendar was refreshed. Choose the source and destination again.");
             return;
           }
           throw error;

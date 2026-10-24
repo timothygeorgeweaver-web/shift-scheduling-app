@@ -309,3 +309,17 @@ Disposable PostgreSQL checks cover persistence, structure/overnight times,
 source preservation, authorization, CSRF, stale settings/source, inactive
 roles, duplicate/concurrent destinations and complete audit rollback.
 The browser copy controls are the next implementation step.
+
+## Browser copy workflow
+
+Each listed schedule offers Copy this week. Selecting it switches the
+creation calendar into copy mode and identifies the source dates.
+Month navigation retains the chosen source. Changing workplace or
+cancelling copy mode clears it.
+
+Only unused configured week-start dates are selectable. Copy week asks
+for confirmation of source and destination dates, then sends both source
+and location revisions. Success reloads the destination calendar and
+returns to blank-week mode. Conflicts refresh the calendar and require
+source/destination selection again. Uncertain outcomes require refresh.
+The source is never modified by the browser copy workflow.
