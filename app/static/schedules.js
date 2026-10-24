@@ -31,16 +31,16 @@ export function createScheduleManager({api, expired}) {
     status.setAttribute("role", "status");
 
     const controls = node("fieldset", "", panel);
-    node("legend", "Workplace and month", controls);
+    node("legend", "Workplace", controls);
     const workplace = node("label", "Workplace", controls);
     const select = node("select", "", workplace);
-    const navigation = node("div", "", controls);
-    navigation.className = "planner-navigation";
 
     const form = node("form", "", panel);
     const fields = node("fieldset", "", form);
     node("legend", "Create blank week", fields);
     const policy = node("p", "", fields);
+    const navigation = node("div", "", fields);
+    navigation.className = "planner-navigation";
     const calendar = node("div", "", fields);
     const selection = node("p", "Choose an available week-start date.", fields);
     selection.setAttribute("role", "status");
@@ -186,13 +186,13 @@ export function createScheduleManager({api, expired}) {
 
     function renderNavigation() {
       navigation.replaceChildren();
-      const previous = action("←", navigation, () => moveMonth(-1));
+      const previous = action("← Previous month", navigation, () => moveMonth(-1));
       previous.setAttribute("aria-label", "Previous month");
       previous.disabled = month === "2000-01";
       node("h3", new Intl.DateTimeFormat("en-US", {
         month: "long", year: "numeric", timeZone: "UTC"
       }).format(new Date(month + "-01T12:00:00Z")), navigation);
-      const next = action("→", navigation, () => moveMonth(1));
+      const next = action("Next month →", navigation, () => moveMonth(1));
       next.setAttribute("aria-label", "Next month");
       next.disabled = month === "9998-12";
     }

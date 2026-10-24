@@ -71,3 +71,11 @@ the schedule section uses a waiting cursor only during an active request.
 A future draft-removal operation can make a date selectable again after
 refresh. Draft deletion is not introduced by this UI refinement.
 Browser verification of the month picker remains pending.
+
+## Month navigation placement
+
+The owner verified valid-date selection, existing-draft blocking, creation,
+persistence and clearing of the waiting cursor. The month heading and
+previous/next controls now sit directly above the creation calendar.
+Buttons explicitly say Previous month and Next month; each moves one month.
+Revised JavaScript passed assistant-side syntax checking.
