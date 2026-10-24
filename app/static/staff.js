@@ -410,14 +410,14 @@ export function createStaffManager({api, expired}) {
       root.append(dialog);
       dialog.append(element("h3", "Change Job Type Order"));
       dialog.append(element("p",
-        "Drag job types into order. The first job type appears first in the planner.",
+        "Use the arrows to arrange job types. The first job type appears first in the planner.",
         "description"));
       const message = element("p", "", "team-status");
       message.setAttribute("role", "status");
       dialog.append(message);
       const list = element("ol", "", "role-order-list");
       dialog.append(list);
-      let ordered = [...roles], dragged = null, dirty = false, blocked = false;
+      let ordered = [...roles], dirty = false, blocked = false;
 
       const buttons = element("div", "", "role-order-actions");
       const saveOrder = element("button", "Save order", "button secondary");
@@ -452,30 +452,8 @@ export function createStaffManager({api, expired}) {
         list.replaceChildren();
         ordered.forEach((role, index) => {
           const row = element("li", "", "role-order-item");
-          row.draggable = !busy && !blocked;
-          row.append(element("span", "⠿", "role-order-handle"));
           row.append(element("strong",
             role.name + (role.active ? "" : " · Inactive")));
-          row.addEventListener("dragstart", event => {
-            if (busy || blocked) { event.preventDefault(); return; }
-            dragged = role.id;
-            event.dataTransfer.effectAllowed = "move";
-            event.dataTransfer.setData("text/plain", role.id);
-          });
-          row.addEventListener("dragend", () => { dragged = null; });
-          row.addEventListener("dragover", event => {
-            if (!dragged || busy || blocked) return;
-            event.preventDefault();
-            event.dataTransfer.dropEffect = "move";
-          });
-          row.addEventListener("drop", event => {
-            event.preventDefault();
-            if (!dragged || busy || blocked) return;
-            const box = row.getBoundingClientRect();
-            move(dragged, role.id, event.clientY > box.top + box.height / 2);
-            dragged = null;
-          });
-
           const controls = element("span", "", "role-order-move");
           for (const [label, offset] of [["↑", -1], ["↓", 1]]) {
             const button = element("button", label, "button secondary");

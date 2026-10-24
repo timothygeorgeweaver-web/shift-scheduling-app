@@ -280,3 +280,7 @@ be arranged. Individual numeric ordering fields are hidden in Team forms.
 
 Refresh an already-open schedule week to load the saved role arrangement.
 Within each role, shifts still sort by earliest actual finish.
+
+Job-type arrangement now uses wider up/down arrow buttons exclusively.
+Drag-and-drop and grab handles have been removed following browser feedback.
+Atomic saving and unsaved-order cancellation remain unchanged.
