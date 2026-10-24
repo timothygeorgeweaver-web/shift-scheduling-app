@@ -1,5 +1,9 @@
 # Stage 3 schedule weeks
 
+Current completion and handoff: [stage_3_status.md](stage_3_status.md).
+The sections below retain implementation history; later entries supersede
+earlier pending statements.
+
 ## Implemented first slice
 
 Migration 0015 adds schedule_week with location, local start date,

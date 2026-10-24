@@ -112,3 +112,18 @@ and subtraction of explicitly entered break intervals.
 
 Allocation of an untimed deduction across local dates for the daily-hours
 eligibility rule remains to be specified before that Stage 4 rule is finalized.
+
+## Direct template planner and Stage 3 completion
+
+The owner approved and browser-verified:
+- Save as template from a scheduled week remains available.
+- Create New Template opens a blank generic Monday–Sunday planner.
+- Edit Template opens its saved pattern in that same planner.
+- Generic templates display weekday names without dates or month navigation.
+- Quarter-hour floating shift controls modify a local template draft.
+- Save template commits the whole pattern; discarding preserves saved data.
+- Editing a template never changes previously generated schedule weeks.
+- Job-type order uses wider up/down arrows rather than drag-and-drop.
+
+Stage 3 completion and the verified recovery checkpoint are recorded in
+stage_3_status.md. Employee assignments and eligibility are the next stage.
