@@ -231,3 +231,24 @@ are ignored.
 This step switches the browser to planner APIs. Legacy HTTP/database write
 retirement and real browser verification remain pending. Keep the server
 stopped until the transition is completed.
+
+## Planner API transition completed
+
+Migration 0014 requires the approved-empty legacy recurring/exception tables
+and revokes runtime execution of the former read_my_unavailability and
+write_my_unavailability functions. Their tables, definitions and existing
+audit history remain intact. Frozen day snapshots remain in use.
+
+The old /api/v1/me/unavailability HTTP routers are no longer registered.
+The current /api/v1/me/planner routes provide profiles, seven-day reads,
+atomic date saves and previewed additive mass editing.
+
+The private integration entry point now creates linked synthetic employees
+and runs the current date-planner, HTTP and bulk certification chain.
+Historical recurring-write certification is no longer invoked, because
+those operations are deliberately retired. Explicit tests confirm the old
+HTTP routes return 404 and old database functions deny runtime execution.
+
+The committed planner-grid.js and unavailability.js modules passed Node
+syntax checks during assistant review of commit 83faaf9.
+Real browser behavior and usability remain pending verification.
