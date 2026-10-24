@@ -23,7 +23,8 @@ def install(version, database, rehearse=False):
         "0012_date_planner_storage", "0013_planner_bulk_scope",
         "0014_retire_legacy_unavailability", "0015_draft_schedule_weeks",
         "0016_draft_shift_slots", "0017_edit_remove_draft_shifts",
-        "0018_job_role_display_order", "0019_schedule_templates"
+        "0018_job_role_display_order", "0019_schedule_templates",
+        "0020_manage_schedule_templates"
     ), "Unsupported migration.")
     require(
         database == "shift_scheduling"
@@ -80,6 +81,7 @@ def install(version, database, rehearse=False):
         "0017_edit_remove_draft_shifts": (set(), []),
         "0018_job_role_display_order": ({"job_role"}, ["display_order"]),
         "0019_schedule_templates": (set(), []),
+        "0020_manage_schedule_templates": (set(), []),
     }[version]
     normalized_expression = "to_jsonb(t)-ARRAY[" + ",".join(
         "'" + key + "'" for key in removed_keys
@@ -171,6 +173,8 @@ def install(version, database, rehearse=False):
             "scheduling.change_draft_shift(uuid,uuid,integer,boolean,uuid,integer,timestamptz,timestamptz,text)",
         "0019_schedule_templates":
             "scheduling.save_schedule_template(uuid,uuid,integer,text)",
+        "0020_manage_schedule_templates":
+            "scheduling.change_schedule_template(uuid,integer,text,boolean,uuid,integer)",
     }[version]
     require(admin(f"""
         SELECT p.prosecdef

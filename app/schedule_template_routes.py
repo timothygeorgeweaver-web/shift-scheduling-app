@@ -155,3 +155,40 @@ def apply_template(
                     detail="A schedule already covers the destination week.",
                 ) from None
             fail(error)
+
+
+from pydantic import StrictBool, model_validator
+
+
+class ChangeTemplate(SaveTemplate):
+    expected_source_revision: StrictInt | None = Field(default=None, ge=1)
+    expected_template_revision: StrictInt = Field(ge=1, le=2147483646)
+    source_week_id: UUID | None = None
+    active: StrictBool = True
+
+    @model_validator(mode="after")
+    def paired_source(self):
+        if (self.source_week_id is None) != (self.expected_source_revision is None):
+            raise ValueError("Supply both source week and source revision.")
+        return self
+
+
+@router.patch("/locations/{location_id}/schedule-templates/{template_id}")
+def change_template(
+    location_id: UUID, template_id: UUID, body: ChangeTemplate,
+    token: str = Depends(mutation_token),
+):
+    with staff_connection(token, write=True) as conn:
+        try:
+            read_template(conn, location_id, template_id)
+            return conn.execute(
+                "SELECT scheduling.change_schedule_template("
+                "%s,%s,%s,%s,%s,%s) AS result",
+                (
+                    template_id, body.expected_template_revision,
+                    body.name, body.active, body.source_week_id,
+                    body.expected_source_revision,
+                ),
+            ).fetchone()["result"]
+        except psycopg.Error as error:
+            template_failure(error)

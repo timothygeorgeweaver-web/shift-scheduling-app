@@ -378,3 +378,18 @@ An open schedule editor disables template-selection buttons along with
 the schedule-list buttons. Sign-out removes the schedule UI and late
 responses are ignored. Existing Copy week and blank-week creation remain
 available through the same calendar.
+
+## Independent template management
+
+PATCH on a template accepts its name, expected template revision, active
+status and an optional source week plus expected source revision.
+Rename preserves the saved pattern. Replacing from a week captures a new
+independent pattern without changing any previously created week.
+Archiving retains the record and audit history while removing active use.
+Archived names remain reserved.
+
+Changes use the organization lock, fresh staff authorization, template/source
+revision checks and atomic before/after audit history. Existing schedule
+weeks and shifts remain unchanged. PostgreSQL certification covers rename,
+pattern replacement, stale edits, isolation, audit rollback and archive.
+Browser management controls are the next closing task.
