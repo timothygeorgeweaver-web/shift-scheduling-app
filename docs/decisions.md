@@ -67,3 +67,28 @@ Qualification, overlap, rest and daily-hour rules remain independent.
 
 Cutoff and publication locks still apply. Later recurring edits must not
 retroactively alter locked dates. The current V1 Word plan is version 1.2.
+
+## Planner redesign and test-data reset approved October 24, 2026
+
+The product owner approved clearing the existing test unavailability rather
+than converting its indefinite recurring pattern into dated blocks.
+
+A verified recovery checkpoint preceded the reset. The reset cleared one
+recurring version and one present date replacement for the same employee.
+There were no frozen dates. Employee accounts, profile links, existing audit
+history, schema and permissions were preserved.
+
+The approved V1 plan version 1.3 governs the next implementation:
+- Main calendar: seven horizontal days with 15-minute unavailable toggles,
+  click-and-drag support, explicit save and visible locks.
+- Month/date headings and arrows moving exactly seven days.
+- Set Recurring Unavailability: a blank matching planner with inclusive
+  start/end dates and previewed additive mass editing.
+- Mass edits union selected blocks with saved blocks; blank cells never clear
+  existing unavailability.
+- Each resulting date remains independently editable.
+- No ongoing recurring rule is required.
+- Preserve cutoff/publication locks, private access, revisions and atomic audit.
+
+The existing form-based editor remains in code pending replacement.
+The new planner and date-based persistence are not implemented by this reset.
