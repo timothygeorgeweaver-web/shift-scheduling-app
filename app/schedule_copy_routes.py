@@ -23,6 +23,47 @@ class CopyWeek(BaseModel):
     expected_location_revision: StrictInt = Field(ge=1, le=2147483647)
 
 
+def populate_draft(conn, location_id, source, destination, target_start):
+    """Populate a new draft inside the caller's existing transaction."""
+    first = date.fromisoformat(source["week"]["week_start_date"])
+    result = None
+    revision = destination["revision"]
+
+    for slot in source["slots"]:
+        local_start = datetime.fromisoformat(slot["local_start"])
+        local_end = datetime.fromisoformat(slot["local_end"])
+        day = target_start + timedelta(
+            days=(local_start.date()-first).days
+        )
+        try:
+            timing = calculate_shift_timing(
+                day,
+                local_start.hour*60+local_start.minute,
+                local_end.hour*60+local_end.minute,
+                ends_next_day=local_end.date() != local_start.date(),
+                timezone_name=destination["timezone"],
+            )
+        except ValueError as error:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Cannot copy a shift to {day}: {error}",
+            ) from None
+
+        result = conn.execute(
+            "SELECT scheduling.create_draft_shift("
+            "%s,%s,%s,%s,%s,%s) AS result",
+            (
+                destination["id"], slot["role_id"], revision,
+                timing.start_utc, timing.end_utc, slot["note"],
+            ),
+        ).fetchone()["result"]
+        revision = result["week"]["revision"]
+
+    if result is None:
+        result = read_week(conn, location_id, UUID(destination["id"]))
+    return result
+
+
 @router.post(
     "/locations/{location_id}/schedule-weeks/{source_week_id}/copy",
     status_code=201,
@@ -61,42 +102,9 @@ def copy_week(
                     detail="This schedule exceeds the 500-shift copy limit.",
                 )
 
-            first = date.fromisoformat(source_week["week_start_date"])
-            result = None
-            revision = destination["revision"]
-
-            for slot in source["slots"]:
-                local_start = datetime.fromisoformat(slot["local_start"])
-                local_end = datetime.fromisoformat(slot["local_end"])
-                day = body.week_start_date + timedelta(
-                    days=(local_start.date()-first).days
-                )
-                try:
-                    timing = calculate_shift_timing(
-                        day,
-                        local_start.hour*60+local_start.minute,
-                        local_end.hour*60+local_end.minute,
-                        ends_next_day=local_end.date() != local_start.date(),
-                        timezone_name=destination["timezone"],
-                    )
-                except ValueError as error:
-                    raise HTTPException(
-                        status_code=422,
-                        detail=f"Cannot copy a shift to {day}: {error}",
-                    ) from None
-
-                result = conn.execute(
-                    "SELECT scheduling.create_draft_shift("
-                    "%s,%s,%s,%s,%s,%s) AS result",
-                    (
-                        destination["id"], slot["role_id"], revision,
-                        timing.start_utc, timing.end_utc, slot["note"],
-                    ),
-                ).fetchone()["result"]
-                revision = result["week"]["revision"]
-
-            if result is None:
-                result = read_week(conn, location_id, UUID(destination["id"]))
+            result = populate_draft(
+                conn, location_id, source, destination, body.week_start_date
+            )
 
             location = _location(conn, location_id)
             _audit(

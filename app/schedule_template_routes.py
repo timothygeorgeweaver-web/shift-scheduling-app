@@ -89,3 +89,69 @@ def save_template(
             ).fetchone()["result"]
         except psycopg.Error as error:
             template_failure(error)
+
+
+from datetime import date
+from app.schedule_copy_routes import populate_draft
+from app.staff_writes import _audit, _location
+
+
+class ApplyTemplate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    week_start_date: date
+    expected_template_revision: StrictInt = Field(ge=1, le=2147483647)
+    expected_location_revision: StrictInt = Field(ge=1, le=2147483647)
+
+
+@router.post(
+    "/locations/{location_id}/schedule-templates/{template_id}/apply",
+    status_code=201,
+)
+def apply_template(
+    location_id: UUID, template_id: UUID, body: ApplyTemplate,
+    token: str = Depends(mutation_token),
+):
+    with staff_connection(token, write=True) as conn:
+        try:
+            read_template(conn, location_id, template_id)
+            destination = conn.execute(
+                "SELECT scheduling.create_blank_schedule_week(%s,%s,%s) AS result",
+                (location_id, body.week_start_date,
+                 body.expected_location_revision),
+            ).fetchone()["result"]
+            template = read_template(conn, location_id, template_id)
+            if template["revision"] != body.expected_template_revision:
+                raise HTTPException(
+                    status_code=409,
+                    detail="The template changed. Refresh before using it.",
+                )
+            if template["week_start_day"] != destination["week_start_day"]:
+                raise HTTPException(
+                    status_code=422,
+                    detail="The template and destination must use the same week-start day.",
+                )
+            result = populate_draft(
+                conn, location_id, template["snapshot"],
+                destination, body.week_start_date,
+            )
+            _audit(
+                conn, _location(conn, location_id),
+                "schedule.template_applied", "location", location_id,
+                {
+                    "template_id": template["id"],
+                    "template_revision": template["revision"],
+                },
+                {
+                    "destination_week_id": destination["id"],
+                    "week_start_date": destination["week_start_date"],
+                    "created_shift_count": len(result["slots"]),
+                },
+            )
+            return result
+        except psycopg.Error as error:
+            if error.sqlstate == "23505":
+                raise HTTPException(
+                    status_code=409,
+                    detail="A schedule already covers the destination week.",
+                ) from None
+            fail(error)

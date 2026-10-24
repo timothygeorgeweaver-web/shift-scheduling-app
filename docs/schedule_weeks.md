@@ -342,3 +342,22 @@ source edits, authorization, CSRF, stale source/name checks and audit rollback.
 
 Applying templates and browser controls are the next implementation step.
 No real templates or shifts are created by the production migration.
+
+## Apply a template to a new draft
+
+POST /api/v1/staff/locations/{location}/schedule-templates/{template}/apply
+accepts week_start_date, expected_template_revision and
+expected_location_revision. It creates a new unassigned draft from the
+saved snapshot, not from the current source schedule.
+
+Copy week and Apply template share the same shift-population function.
+Both recalculate UTC endpoints and working-hour estimates for destination
+dates, preserve local times and notes, and reject inactive roles or
+invalid local times without retaining any partial destination.
+
+Template application writes a summary audit event and commits the new
+week, shifts and audits atomically. Existing weeks cannot be overwritten.
+PostgreSQL certification covers snapshot independence, persistence,
+overnight structure, stale settings/template revisions, authorization,
+concurrent destinations and full audit rollback.
+Browser template save/use controls remain the next step.

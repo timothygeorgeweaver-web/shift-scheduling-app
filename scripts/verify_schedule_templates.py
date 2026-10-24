@@ -111,6 +111,9 @@ def verify(test_db, identities, location, week_id):
                     headers={"X-CSRF-Token": _csrf(other)}, json=body)
                     .status_code == expected, "Template write isolation failed.")
 
+    from scripts.verify_template_apply import verify as verify_apply
+    verify_apply(test_db, identities, location, template['id'], detail)
+
     try:
         with psycopg.connect(database_url()) as conn:
             conn.execute("SELECT * FROM scheduling.schedule_template")
