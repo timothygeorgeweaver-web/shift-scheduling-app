@@ -49,6 +49,8 @@ from app.shift_routes import router as shift_router
 app.include_router(shift_router)
 from app.schedule_copy_routes import router as schedule_copy_router
 app.include_router(schedule_copy_router)
+from app.schedule_template_routes import router as schedule_template_router
+app.include_router(schedule_template_router)
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 

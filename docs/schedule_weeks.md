@@ -323,3 +323,22 @@ and location revisions. Success reloads the destination calendar and
 returns to blank-week mode. Conflicts refresh the calendar and require
 source/destination selection again. Uncertain outcomes require refresh.
 The source is never modified by the browser copy workflow.
+
+## Independent named schedule templates
+
+Migration 0019 adds private schedule_template storage and controlled
+save/list/read functions. Saving captures active shift structure, role IDs,
+local endpoints and notes as a snapshot, with the source's week-start day.
+It does not retain employee assignments or depend on later source edits.
+
+Names are trimmed, limited to 100 characters and unique ignoring case
+within a location. Templates are limited to 500 slots. Saving checks the
+source revision under the organization lock and writes its audit event in
+the same transaction. Runtime has no direct template-table access.
+
+Staff APIs list templates, read their snapshots, and save from an existing
+week. Disposable PostgreSQL checks verify persistence, independence from
+source edits, authorization, CSRF, stale source/name checks and audit rollback.
+
+Applying templates and browser controls are the next implementation step.
+No real templates or shifts are created by the production migration.

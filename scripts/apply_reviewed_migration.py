@@ -23,7 +23,7 @@ def install(version, database, rehearse=False):
         "0012_date_planner_storage", "0013_planner_bulk_scope",
         "0014_retire_legacy_unavailability", "0015_draft_schedule_weeks",
         "0016_draft_shift_slots", "0017_edit_remove_draft_shifts",
-        "0018_job_role_display_order"
+        "0018_job_role_display_order", "0019_schedule_templates"
     ), "Unsupported migration.")
     require(
         database == "shift_scheduling"
@@ -79,6 +79,7 @@ def install(version, database, rehearse=False):
         "0016_draft_shift_slots": (set(), []),
         "0017_edit_remove_draft_shifts": (set(), []),
         "0018_job_role_display_order": ({"job_role"}, ["display_order"]),
+        "0019_schedule_templates": (set(), []),
     }[version]
     normalized_expression = "to_jsonb(t)-ARRAY[" + ",".join(
         "'" + key + "'" for key in removed_keys
@@ -125,6 +126,11 @@ def install(version, database, rehearse=False):
                 "Unexpected shift tables.")
         require(after["data"]["shift_slot"]["rows"] == 0,
                 "Migration seeded real shifts.")
+    if version == "0019_schedule_templates":
+        require(set(after["data"])-set(before["data"]) == {"schedule_template"},
+                "Unexpected template tables.")
+        require(after["data"]["schedule_template"]["rows"] == 0,
+                "Migration seeded real templates.")
     for table, value in before["data"].items():
         if table not in stripped | {"schema_migration"}:
             require(after["data"][table] == value,
@@ -163,6 +169,8 @@ def install(version, database, rehearse=False):
             "scheduling.change_draft_shift(uuid,uuid,integer,boolean,uuid,integer,timestamptz,timestamptz,text)",
         "0018_job_role_display_order":
             "scheduling.change_draft_shift(uuid,uuid,integer,boolean,uuid,integer,timestamptz,timestamptz,text)",
+        "0019_schedule_templates":
+            "scheduling.save_schedule_template(uuid,uuid,integer,text)",
     }[version]
     require(admin(f"""
         SELECT p.prosecdef

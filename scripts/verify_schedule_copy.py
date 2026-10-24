@@ -157,6 +157,9 @@ def verify(test_db, identities, location, week_id, role_id, first):
                                    json=body(84)).status_code == expected,
                         "Copy staff/business isolation failed.")
 
+    from scripts.verify_schedule_templates import verify as verify_templates
+    verify_templates(test_db, identities, location, week_id)
+
     print("COPY_WEEK_STRUCTURE_NOTES_AND_OVERNIGHT_TIMES=PASS")
     print("COPIED_DRAFT_PERSISTENCE_AND_SOURCE_PRESERVATION=PASS")
     print("COPY_CSRF_AUTHORIZATION_AND_REVISION_CHECKS=PASS")

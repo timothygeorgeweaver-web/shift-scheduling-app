@@ -180,7 +180,7 @@ def main():
 
     before = fingerprint(SOURCE)
     migration_paths = sorted((ROOT / "migrations").glob("[0-9][0-9][0-9][0-9]_*.sql"))
-    require(len(migration_paths) == 18, "Expected eighteen reviewed migration files.")
+    require(len(migration_paths) == 19, "Expected nineteen reviewed migration files.")
     expected_migrations = {
         item.stem: hashlib.sha256(item.read_bytes()).hexdigest()
         for item in migration_paths
@@ -200,7 +200,7 @@ def main():
             "job_role", "employee_qualification", "auth_session", "audit_event",
             "unavailability_recurring", "unavailability_exception",
             "unavailability_day_lock", "unavailability_date", "schedule_week",
-            "shift_slot",
+            "shift_slot", "schedule_template",
         },
         "Unexpected baseline tables; preserve evidence and inspect.",
     )
