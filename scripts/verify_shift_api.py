@@ -159,6 +159,9 @@ def verify(test_db, identities, location):
         require(client.get(location_url+"/schedule-weeks/"+str(uuid4())).status_code
                 == 404, "Unknown schedule detail was exposed.")
 
+        from scripts.verify_schedule_copy import verify as verify_copy
+        verify_copy(test_db, identities, location, week_id, role_id, first)
+
         literal = lambda value: sql.Literal(value).as_string()
         admin(
             f"UPDATE scheduling.schedule_week SET state='archived' "

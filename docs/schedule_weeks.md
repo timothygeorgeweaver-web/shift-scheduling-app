@@ -284,3 +284,28 @@ Within each role, shifts still sort by earliest actual finish.
 Job-type arrangement now uses wider up/down arrow buttons exclusively.
 Drag-and-drop and grab handles have been removed following browser feedback.
 Atomic saving and unsaved-order cancellation remain unchanged.
+
+## Atomic copying into a new draft
+
+POST /api/v1/staff/locations/{location}/schedule-weeks/{source}/copy accepts
+week_start_date, expected_source_revision and expected_location_revision.
+The destination must be an unused configured week-start date in the same
+location. Source and destination must use the same week-start weekday.
+
+The operation creates a new draft and copies all active coverage slots
+with new IDs and no employee assignments. It preserves local weekday,
+start/end wall times, overnight endings, role and note. It recalculates
+UTC endpoints and working-hour estimates in the destination timezone.
+Ambiguous/nonexistent destination times or inactive roles reject the
+whole copy. Removed shifts are excluded. Copies are limited to 500 slots.
+
+Creation obtains the organization lock shared by controlled shift writes.
+The source is re-read and its revision checked under that lock. Destination,
+shifts and audit events commit together. A copy summary audit records the
+source revision and destination ID. Failures roll back the entire operation.
+The source remains unchanged. No new migration or privileges are required.
+
+Disposable PostgreSQL checks cover persistence, structure/overnight times,
+source preservation, authorization, CSRF, stale settings/source, inactive
+roles, duplicate/concurrent destinations and complete audit rollback.
+The browser copy controls are the next implementation step.
