@@ -252,3 +252,19 @@ HTTP routes return 404 and old database functions deny runtime execution.
 The committed planner-grid.js and unavailability.js modules passed Node
 syntax checks during assistant review of commit 83faaf9.
 Real browser behavior and usability remain pending verification.
+
+## Browser verification and generic mass-edit week
+
+The owner confirmed browser checks for main planner layout/navigation,
+toggle/drag/save persistence, additive bulk submission, independent date
+corrections, unsaved-edit discard prompts, past-date locks and sign-out.
+
+The mass-edit layout was refined after browser review:
+- Show one generic seven-day pattern with weekday names only.
+- Remove its representative calendar dates, month heading and week arrows.
+- Use weekday names in its cell tooltips and accessible labels.
+- Keep inclusive start/end date fields and the dated submission preview.
+- Main calendar retains its dated heading and seven-day navigation.
+
+The revised JavaScript passed assistant-side Node syntax checks.
+Owner verification of this layout refinement remains pending.

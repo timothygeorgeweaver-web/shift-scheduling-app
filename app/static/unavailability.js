@@ -1,6 +1,6 @@
 import {
   node, action, addDays, weekday, monthHeading, createPlannerGrid
-} from "/static/planner-grid.js?v=1";
+} from "/static/planner-grid.js?v=2";
 
 export function createUnavailabilityManager({api, expired}) {
   let root = null, epoch = 0, cleanup = () => {};
@@ -281,13 +281,8 @@ export function createUnavailabilityManager({api, expired}) {
       from.addEventListener("change", () => { bulk.first = from.value; invalidate(); });
       to.addEventListener("change", () => { bulk.last = to.value; invalidate(); });
 
-      navigation(view, bulk.anchor, count => {
-        const candidate = addDays(bulk.anchor, count);
-        if (candidate < minDate || candidate > maxFirst) return;
-        bulk.anchor = candidate;
-        render();
-      });
-      node("p", "The dates below illustrate the weekly pattern. The start and end dates above determine which dates will be changed.", view);
+      node("h3", "Weekly pattern", view);
+      node("p", "Mark the times you cannot work on each weekday. The start and end dates above control where this pattern is added.", view);
 
       const days = Array.from({length: 7}, (_, i) => {
         const day = addDays(bulk.anchor, i);
@@ -299,7 +294,7 @@ export function createUnavailabilityManager({api, expired}) {
       grid = createPlannerGrid(view, days, (index, cells) => {
         bulk.cells[String(weekday(days[index].date))] = cells;
         invalidate();
-      }, scrollPositions.bulk);
+      }, scrollPositions.bulk, {genericWeek: true});
 
       const controls = node("div", "", view);
       controls.className = "team-controls planner-footer";

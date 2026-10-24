@@ -42,7 +42,7 @@ export function clock(minute) {
   return `${Math.floor(minute / 60).toString().padStart(2, "0")}:${(minute % 60).toString().padStart(2, "0")}`;
 }
 
-export function createPlannerGrid(parent, days, changed, initialScroll = 0) {
+export function createPlannerGrid(parent, days, changed, initialScroll = 0, {genericWeek = false} = {}) {
   const scroll = node("div", "", parent);
   scroll.className = "planner-scroll";
   scroll.tabIndex = -1;
@@ -62,8 +62,10 @@ export function createPlannerGrid(parent, days, changed, initialScroll = 0) {
     const cell = node("th", "", header);
     cell.scope = "col";
     node("strong", names[weekday(day.date)], cell);
-    node("span", day.date, cell);
-    node("small", day.editable ? "Editable" : "Locked", cell);
+    if (!genericWeek) {
+      node("span", day.date, cell);
+      node("small", day.editable ? "Editable" : "Locked", cell);
+    }
     if (day.effective_cells === null) {
       node("small", "Exact locked times: " + day.blocked.map(
         ([start, end]) => `${clock(start)}–${clock(end)}`
@@ -90,7 +92,8 @@ export function createPlannerGrid(parent, days, changed, initialScroll = 0) {
     button.textContent = blocked ? (days[dayIndex].effective_cells === null ? "◐" : "×") : "";
     button.setAttribute("aria-pressed", String(blocked));
     button.setAttribute("aria-disabled", String(locked || !enabled));
-    const description = `${days[dayIndex].date} ${clock(cell * 15)}–${clock((cell + 1) * 15)}: ` +
+    const dayLabel = genericWeek ? names[weekday(days[dayIndex].date)] : days[dayIndex].date;
+    const description = `${dayLabel} ${clock(cell * 15)}–${clock((cell + 1) * 15)}: ` +
       (locked ? "locked, " : "") + (blocked ? "unavailable" : "available");
     button.setAttribute("aria-label", description);
     button.title = description;
