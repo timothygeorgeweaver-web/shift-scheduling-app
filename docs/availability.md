@@ -113,3 +113,36 @@ A client-provided preview is never sufficient authority to write.
 The existing form editor and legacy persistence remain connected for now.
 The new planner screen and date-based transaction service are pending.
 No database records are changed by this foundation step.
+
+## Date-specific planner storage and atomic saves
+
+Migration 0012 adds unavailability_date with local-date blocked cells,
+optimistic revisions, actor and timestamps. Missing rows mean fully available.
+Cleared dates retain their revision with an empty blocked-cell list.
+
+Controlled database functions:
+- read_my_planner(location, first_date) returns seven dates, revisions,
+  blocked cells, location policy and cutoff/frozen-day state.
+- save_my_planner(location, first_date, expected_location_revision, changes)
+  atomically replaces blocked cells for one through seven changed dates
+  inside the displayed seven-day range.
+
+The database derives the employee from the live session and active account,
+membership and employee link. No arbitrary employee ID is accepted.
+Runtime has no direct date-table grants. Writes serialize with location
+policy and employee changes, reject stale revisions and locked dates, and
+recheck deadlines before returning. Every effective date change is audited
+in the same transaction. Existing restrictive audit privacy applies.
+
+Frozen snapshots remain authoritative: read responses include frozen_blocked
+for the future HTTP projection to use instead of ordinary date cells.
+Database checks cover exact cells, whole-save rollback, independent date
+clearing, concurrent saves, frozen/cutoff denial and employee privacy.
+
+This step adds the new database path alongside the legacy path. It does not
+switch the existing form editor or retire legacy write functions yet.
+Keep the app stopped during the remaining transition; the UI switch must
+verify legacy tables remain empty before retiring the old path.
+
+HTTP planner routes, additive bulk preview/commit, and the visual planner
+remain pending. No real employee planner blocks are seeded by migration 0012.

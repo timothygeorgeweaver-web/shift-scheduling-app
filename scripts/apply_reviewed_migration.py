@@ -19,7 +19,8 @@ def install(version, database, rehearse=False):
     require(version in (
         "0007_account_access_management", "0008_location_settings",
         "0009_availability_policy", "0010_private_unavailability_storage",
-        "0011_employee_unavailability_writes"
+        "0011_employee_unavailability_writes",
+        "0012_date_planner_storage"
     ), "Unsupported migration.")
     require(
         database == "shift_scheduling"
@@ -68,6 +69,7 @@ def install(version, database, rehearse=False):
         ]),
         "0010_private_unavailability_storage": (set(), []),
         "0011_employee_unavailability_writes": (set(), []),
+        "0012_date_planner_storage": (set(), []),
     }[version]
     normalized_expression = "to_jsonb(t)-ARRAY[" + ",".join(
         "'" + key + "'" for key in removed_keys
@@ -99,6 +101,11 @@ def install(version, database, rehearse=False):
                 "Unexpected private-storage tables.")
         require(all(after["data"][name]["rows"] == 0 for name in new_tables),
                 "Migration unexpectedly created employee records.")
+    if version == "0012_date_planner_storage":
+        require(set(after["data"])-set(before["data"]) == {"unavailability_date"},
+                "Unexpected planner tables.")
+        require(after["data"]["unavailability_date"]["rows"] == 0,
+                "Migration seeded planner data.")
     for table, value in before["data"].items():
         if table not in stripped | {"schema_migration"}:
             require(after["data"][table] == value,
@@ -123,6 +130,8 @@ def install(version, database, rehearse=False):
             "scheduling.read_my_unavailability(uuid,date,integer)",
         "0011_employee_unavailability_writes":
             "scheduling.write_my_unavailability(uuid,text,date,integer,integer,jsonb)",
+        "0012_date_planner_storage":
+            "scheduling.save_my_planner(uuid,date,integer,jsonb)",
     }[version]
     require(admin(f"""
         SELECT p.prosecdef

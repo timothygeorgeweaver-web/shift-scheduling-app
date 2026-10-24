@@ -282,6 +282,9 @@ def verify(test_db, identities, location, own, other):
         test_db,
     ) == "t", "Employee audit actor/history verification failed.")
 
+    from scripts.verify_date_planner import verify as verify_planner
+    verify_planner(test_db, identities, location, own, other)
+
     print("EMPLOYEE_RECURRING_EXCEPTION_AND_DELETION_WRITES=PASS")
     print("CSRF_SHAPE_VALIDATION_AND_DATABASE_VALIDATION=PASS")
     print("CUTOFF_PUBLICATION_AND_ADJACENT_FROZEN_DAY_PROTECTION=PASS")
