@@ -117,3 +117,29 @@ No employee is assigned by shift creation.
 The migration creates no real shifts and preserves existing schedules and
 unavailability. HTTP shift routes, browser creation/editing, removal controls,
 templates and copying remain pending.
+
+## Shift detail and creation HTTP API
+
+GET /api/v1/staff/locations/{location}/schedule-weeks/{week}
+returns authorized schedule metadata and active role-specific slots.
+
+POST /api/v1/staff/locations/{location}/schedule-weeks/{week}/shifts
+accepts role_id, local_date, start_minute, end_minute, ends_next_day,
+expected_week_revision and an optional note. Unknown fields, including
+employee assignments or scheduled lunch fields, are rejected.
+
+The API resolves local endpoints using the schedule week's captured timezone.
+The controlled database function independently enforces authority, Draft
+state, active same-location role, time validity and the expected revision.
+Both layers preserve full endpoints and expose the automatic meal estimate.
+
+CSRF/origin checks protect mutations; responses are no-store. Stale changes
+return 409, non-Draft writes 423, invalid times/roles 422, and unknown or
+inaccessible schedules 404. Employee-only users cannot inspect drafts.
+
+Disposable PostgreSQL HTTP checks cover persistence, role display, automatic
+meal estimate, overnight end dates, validation, stale requests, atomic audit
+rollback, staff isolation and non-Draft denial.
+
+The browser shift editor and shift change/removal operations remain pending.
+This API step changes no production database records.

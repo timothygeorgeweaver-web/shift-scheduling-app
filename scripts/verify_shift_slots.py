@@ -186,6 +186,9 @@ def verify(test_db, identities, location):
     else:
         raise SystemExit("STOP: Runtime has direct shift-table access.")
 
+    from scripts.verify_shift_api import verify as verify_api
+    verify_api(test_db, identities, location)
+
     print("ROLE_SPECIFIC_SHIFT_CREATE_AND_READ=PASS")
     print("AUTOMATIC_MEAL_ESTIMATE_MATCHES_SHARED_CALCULATION=PASS")
     print("DUPLICATE_COVERAGE_AND_OVERNIGHT_SHIFT_SUPPORT=PASS")
