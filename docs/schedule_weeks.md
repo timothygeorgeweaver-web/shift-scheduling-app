@@ -186,3 +186,13 @@ The signed-in workspace uses the available screen width for seven-day
 planners. Narrow screens retain horizontal scrolling.
 Shift entry uses validated 24-hour HH:MM text fields, independent of the
 browser's regional AM/PM preference.
+
+## Compact cards and page scrolling
+
+Shift cards display only their job role name. Their full stored timing,
+notes and meal estimates remain unchanged, and finish-time sorting remains
+in effect. Editing and deletion controls are pending.
+
+The schedule grid expands to its full height and uses page scrolling.
+The Add shift form appears above the grid when a starting cell is selected.
+The day headings remain sticky while scrolling through the schedule.

@@ -344,3 +344,21 @@ main { padding-left: 12px; padding-right: 12px; min-width: 0; }
   .account-card:has(.team:not([hidden])),
   .account-card:has(.unavailability) { padding: 12px; }
 }
+
+/* The schedule planner scrolls with the page. */
+.schedule-grid-scroll {
+  max-height: none;
+  height: auto;
+  overflow: visible;
+}
+.schedule-time-grid {
+  min-width: 0;
+  grid-template-columns: 60px repeat(7, minmax(0, 1fr));
+}
+.schedule-start-card {
+  padding: 5px 6px;
+  margin-bottom: 4px;
+  font-size: 12px;
+}
+.schedule-start-card strong { line-height: 1.35; }
+.schedule-grid-heading { top: 0; }

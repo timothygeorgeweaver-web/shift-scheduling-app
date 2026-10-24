@@ -40,8 +40,7 @@ export function createScheduleGrid(parent, data, roles, choose, scrollTop = 1408
 
   const scroll = node("div", "", parent);
   scroll.className = "schedule-grid-scroll";
-  scroll.tabIndex = 0;
-  scroll.setAttribute("aria-label", "Seven-day shift planner; scroll for more times");
+  scroll.setAttribute("aria-label", "Seven-day shift planner");
 
   const grid = node("div", "", scroll);
   grid.className = "schedule-time-grid";
@@ -66,18 +65,7 @@ export function createScheduleGrid(parent, data, roles, choose, scrollTop = 1408
         const card = node("article", "", box);
         card.className = "schedule-start-card";
         node("strong", shift.role_name, card);
-        const overnight = shift.local_end.slice(0, 10) !== day;
-        node("span",
-          `${shift.local_start.slice(11, 16)}–${shift.local_end.slice(11, 16)}${overnight ? " (+1 day)" : ""}`,
-          card);
-        node("small", "Unassigned", card);
-        const hours = Math.floor(shift.estimated_work_minutes / 60);
-        const minutes = shift.estimated_work_minutes % 60;
-        node("small", `Estimated work: ${hours}h${minutes ? ` ${minutes}m` : ""}`, card);
-        if (shift.meal_estimate_minutes) {
-          node("small", "Includes 30-minute meal estimate", card);
-        }
-        if (shift.note) node("small", shift.note, card);
+
       }
       if (data.week.state === "draft") {
         const add = action("+ Add shift", box, () => {
@@ -88,6 +76,5 @@ export function createScheduleGrid(parent, data, roles, choose, scrollTop = 1408
       }
     }
   }
-  scroll.scrollTop = scrollTop;
   return scroll;
 }

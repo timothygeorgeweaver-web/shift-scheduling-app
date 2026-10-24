@@ -1,5 +1,5 @@
 import {node, action, addDays, weekday} from "/static/planner-grid.js?v=2";
-import {createScheduleGrid, clockMinute} from "/static/schedule-grid.js?v=1";
+import {createScheduleGrid, clockMinute} from "/static/schedule-grid.js?v=2";
 
 export function createShiftEditor({api, expired, identity, parent, onOpen}) {
   const root = node("section", "", parent);
@@ -157,6 +157,7 @@ export function createShiftEditor({api, expired, identity, parent, onOpen}) {
       return;
     }
     const form = node("form", "", content);
+    content.insertBefore(form, content.querySelector(".schedule-grid-scroll"));
     inputFields = node("fieldset", "", form);
     node("legend", "Add shift", inputFields);
     const activeRoles = roles.filter(role => role.active);
