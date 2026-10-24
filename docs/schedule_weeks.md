@@ -34,3 +34,21 @@ real schedules or shifts and changes no employee unavailability.
 Assignment eligibility and commit rules belong to Stage 4.
 Publication, employee roster visibility and publication-triggered
 availability snapshots belong to Stage 5.
+
+## Schedule index browser implementation
+
+The Schedules section appears for administrator/scheduler accounts and uses
+server-authorized location lists. It supports a bounded 90-day list range,
+manual refresh, configured week-start/timezone guidance, and explicit blank
+draft creation using the current location revision and CSRF token.
+
+Successful creation reloads the list around the new draft. Duplicate,
+stale-setting and uncertain outcomes require a list refresh before retrying.
+The UI does not expose client-controlled publication state.
+
+Employee-only accounts do not display the schedule index. Backend staff
+authorization remains authoritative. Sign-out removes the schedule section;
+late responses from a previous account are ignored.
+
+Week selection and shift editing will be added with the draft builder.
+Browser verification of this index and creation form remains pending.

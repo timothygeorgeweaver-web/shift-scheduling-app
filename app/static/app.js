@@ -1,11 +1,15 @@
 import {createStaffManager} from "/static/staff.js?v=5";
 import {createUnavailabilityManager} from "/static/unavailability.js?v=3";
+import {createScheduleManager} from "/static/schedules.js?v=1";
 
 (() => {
   "use strict";
 
   const byId = (id) => document.getElementById(id);
   let csrfToken = "";
+  const schedules = createScheduleManager({
+    api, expired: () => showLogin("Your session ended. Please sign in again.")
+  });
   const unavailability = createUnavailabilityManager({
     api, expired: () => showLogin("Your session ended. Please sign in again.")
   });
@@ -19,6 +23,7 @@ import {createUnavailabilityManager} from "/static/unavailability.js?v=3";
   function showLogin(text = "") {
     staff.reset();
     unavailability.reset();
+    schedules.reset();
     csrfToken = "";
     byId("loading").hidden = true;
     byId("account-view").hidden = true;
@@ -57,6 +62,7 @@ import {createUnavailabilityManager} from "/static/unavailability.js?v=3";
     message("account-message", "");
     staff.start(identity);
     unavailability.start(identity);
+    schedules.start(identity);
   }
 
   async function api(path, options = {}) {
