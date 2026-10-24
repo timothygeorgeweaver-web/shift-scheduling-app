@@ -117,6 +117,9 @@ def verify(test_db, identities, location, week_id):
     from scripts.verify_template_changes import verify as verify_changes
     verify_changes(test_db, identities, location, template['id'], week_id)
 
+    from scripts.verify_direct_templates import verify as verify_direct
+    verify_direct(test_db, identities, location)
+
     try:
         with psycopg.connect(database_url()) as conn:
             conn.execute("SELECT * FROM scheduling.schedule_template")

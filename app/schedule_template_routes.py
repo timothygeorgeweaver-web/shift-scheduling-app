@@ -192,3 +192,78 @@ def change_template(
             ).fetchone()["result"]
         except psycopg.Error as error:
             template_failure(error)
+
+
+from psycopg.types.json import Jsonb
+from app.template_pattern import TemplateDraft, from_snapshot, to_snapshot
+
+
+class PatternWrite(TemplateDraft):
+    expected_template_revision: StrictInt = Field(default=0, ge=0, le=2147483646)
+    expected_location_revision: StrictInt = Field(ge=1, le=2147483647)
+
+
+@router.get("/locations/{location_id}/schedule-templates/{template_id}/pattern")
+def template_pattern(
+    location_id: UUID, template_id: UUID, token: str = Depends(_token),
+):
+    with staff_connection(token) as conn:
+        try:
+            saved = read_template(conn, location_id, template_id)
+            location = conn.execute(
+                "SELECT revision FROM scheduling.location WHERE id=%s",
+                (location_id,),
+            ).fetchone()
+            try:
+                draft = from_snapshot(saved["snapshot"], saved["name"])
+            except ValueError as error:
+                raise HTTPException(status_code=422, detail=str(error)) from None
+            return {
+                **draft.model_dump(mode="json"),
+                "id": saved["id"],
+                "revision": saved["revision"],
+                "week_start_day": saved["week_start_day"],
+                "location_revision": location["revision"],
+            }
+        except psycopg.Error as error:
+            template_failure(error)
+
+
+def write_pattern(token, location_id, template_id, body):
+    with staff_connection(token, write=True) as conn:
+        try:
+            authorized_location(conn, location_id)
+            location = conn.execute(
+                "SELECT week_start FROM scheduling.location WHERE id=%s",
+                (location_id,),
+            ).fetchone()
+            weekday = location["week_start"]
+            if template_id is not None:
+                weekday = read_template(conn, location_id, template_id)["week_start_day"]
+            return conn.execute(
+                "SELECT scheduling.save_template_pattern("
+                "%s,%s,%s,%s,%s,%s) AS result",
+                (
+                    location_id, template_id, body.expected_template_revision,
+                    body.expected_location_revision, body.name,
+                    Jsonb(to_snapshot(body, weekday)),
+                ),
+            ).fetchone()["result"]
+        except psycopg.Error as error:
+            template_failure(error)
+
+
+@router.post("/locations/{location_id}/schedule-templates", status_code=201)
+def create_template_pattern(
+    location_id: UUID, body: PatternWrite,
+    token: str = Depends(mutation_token),
+):
+    return write_pattern(token, location_id, None, body)
+
+
+@router.put("/locations/{location_id}/schedule-templates/{template_id}/pattern")
+def replace_template_pattern(
+    location_id: UUID, template_id: UUID, body: PatternWrite,
+    token: str = Depends(mutation_token),
+):
+    return write_pattern(token, location_id, template_id, body)

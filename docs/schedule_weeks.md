@@ -429,3 +429,21 @@ Off-grid saved times are rejected explicitly rather than rounded.
 Actual-date DST validation remains part of applying a template to a week.
 This first step adds only the pure model and tests. Direct persistence and
 the revised browser editor remain pending.
+
+## Direct generic pattern persistence
+
+POST schedule-templates creates a named template directly from generic
+weekday slots. GET {template}/pattern returns the editable pattern.
+PUT {template}/pattern saves the complete draft with expected template and
+location revisions. No intermediate schedule week or shift is created.
+
+Python and PostgreSQL independently enforce quarter-hour endpoints,
+positive same/next-day intervals, bounded pattern size and active
+same-location job roles. Generic patterns use canonical internal dates;
+the editor exposes only weekdays. Applying the saved template resolves
+real destination dates and validates DST separately.
+
+Whole-pattern creation/replacement and before/after audit writes commit
+atomically. Stale or concurrent edits cannot overwrite one another.
+The existing Save as template, Apply template and Archive remain compatible.
+Direct planner browser controls are the next step.
