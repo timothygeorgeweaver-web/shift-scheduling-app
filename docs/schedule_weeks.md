@@ -361,3 +361,20 @@ PostgreSQL certification covers snapshot independence, persistence,
 overnight structure, stale settings/template revisions, authorization,
 concurrent destinations and full audit rollback.
 Browser template save/use controls remain the next step.
+
+## Browser template save and use
+
+Save as template beside a schedule opens a floating name-entry window.
+Saving captures the listed source revision; duplicate names or stale
+sources refresh the calendar and require a new selection.
+
+Schedule templates lists named snapshots and their shift counts.
+Use template selects a snapshot, then the existing month calendar selects
+an unused destination week. Month navigation retains the selection.
+Create from template confirms the name and dates before applying it.
+Changing workplace, cancelling selection or successful creation clears it.
+
+An open schedule editor disables template-selection buttons along with
+the schedule-list buttons. Sign-out removes the schedule UI and late
+responses are ignored. Existing Copy week and blank-week creation remain
+available through the same calendar.
