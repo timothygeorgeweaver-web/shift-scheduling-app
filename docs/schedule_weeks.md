@@ -196,3 +196,21 @@ in effect. Editing and deletion controls are pending.
 The schedule grid expands to its full height and uses page scrolling.
 The Add shift form appears above the grid when a starting cell is selected.
 The day headings remain sticky while scrolling through the schedule.
+
+## Controlled draft shift edits and removal
+
+PATCH on a shift accepts its full role/date/time/note values plus expected
+week and shift revisions. POST to its /remove endpoint accepts both
+revisions and deactivates the shift while preserving its stored history.
+
+Both operations require live staff authorization and CSRF protection.
+They lock the organization, week and target shift, reject non-draft weeks,
+and commit shift, week revision and audit changes in one transaction.
+Edits retain the shift ID and independently validate local endpoints using
+the same database rules as creation. Removal remains possible for shifts
+whose role has since become inactive.
+
+Disposable PostgreSQL checks cover persistence, recalculated meal estimates,
+overnight edits, concurrent/stale edits, access isolation, removal history
+and full rollback on an audit failure. Browser edit/remove controls remain
+the next implementation step.

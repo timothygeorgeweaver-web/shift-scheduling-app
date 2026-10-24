@@ -153,6 +153,9 @@ def verify(test_db, identities, location):
             "DROP FUNCTION scheduling.reject_shift_api_audit_test();", test_db,
         )
 
+        from scripts.verify_shift_changes import verify as verify_changes
+        verify_changes(test_db, identities, location, week_id, role_id, first)
+
         require(client.get(location_url+"/schedule-weeks/"+str(uuid4())).status_code
                 == 404, "Unknown schedule detail was exposed.")
 

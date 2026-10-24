@@ -99,3 +99,71 @@ def create_shift(
             ).fetchone()["result"]
         except psycopg.Error as error:
             fail(error)
+
+
+class EditShift(CreateShift):
+    expected_shift_revision: StrictInt = Field(ge=1, le=2147483646)
+
+
+class RemoveShift(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    expected_week_revision: StrictInt = Field(ge=1, le=2147483646)
+    expected_shift_revision: StrictInt = Field(ge=1, le=2147483646)
+
+
+@router.patch("/locations/{location_id}/schedule-weeks/{week_id}/shifts/{shift_id}")
+def edit_shift(
+    location_id: UUID, week_id: UUID, shift_id: UUID, body: EditShift,
+    token: str = Depends(mutation_token),
+):
+    with staff_connection(token, write=True) as conn:
+        try:
+            data = read_week(conn, location_id, week_id)
+            week = data["week"]
+            first = date.fromisoformat(week["week_start_date"])
+            if not first <= body.local_date <= first+timedelta(days=6):
+                raise HTTPException(
+                    status_code=422,
+                    detail="The shift must start within this schedule week.",
+                )
+            try:
+                timing = calculate_shift_timing(
+                    body.local_date, body.start_minute, body.end_minute,
+                    ends_next_day=body.ends_next_day,
+                    timezone_name=week["timezone"],
+                )
+            except ValueError as error:
+                raise HTTPException(status_code=422, detail=str(error)) from None
+            return conn.execute(
+                "SELECT scheduling.change_draft_shift("
+                "%s,%s,%s,%s,%s,%s,%s,%s,%s) AS result",
+                (
+                    week_id, shift_id, body.expected_shift_revision, False,
+                    body.role_id, body.expected_week_revision,
+                    timing.start_utc, timing.end_utc, body.note,
+                ),
+            ).fetchone()["result"]
+        except psycopg.Error as error:
+            fail(error)
+
+
+@router.post(
+    "/locations/{location_id}/schedule-weeks/{week_id}/shifts/{shift_id}/remove"
+)
+def remove_shift(
+    location_id: UUID, week_id: UUID, shift_id: UUID, body: RemoveShift,
+    token: str = Depends(mutation_token),
+):
+    with staff_connection(token, write=True) as conn:
+        try:
+            read_week(conn, location_id, week_id)
+            return conn.execute(
+                "SELECT scheduling.change_draft_shift("
+                "%s,%s,%s,%s,%s,%s,%s,%s,%s) AS result",
+                (
+                    week_id, shift_id, body.expected_shift_revision, True,
+                    None, body.expected_week_revision, None, None, None,
+                ),
+            ).fetchone()["result"]
+        except psycopg.Error as error:
+            fail(error)

@@ -186,6 +186,7 @@ def verify(test_db, identities, location):
     else:
         raise SystemExit("STOP: Runtime has direct shift-table access.")
 
+    install("0017_edit_remove_draft_shifts", test_db)
     from scripts.verify_shift_api import verify as verify_api
     verify_api(test_db, identities, location)
 
