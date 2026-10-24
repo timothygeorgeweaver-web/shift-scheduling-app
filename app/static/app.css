@@ -67,7 +67,7 @@ input:focus-visible, button:focus-visible, a:focus-visible {
 .primary:hover { background: #0c574e; }
 .secondary { background: #fff; border-color: var(--border); color: #334b59; }
 .secondary:hover { background: #f4f6f8; }
-.button:disabled { opacity: .65; cursor: wait; }
+.button:disabled { opacity: .65; cursor: not-allowed; }
 .message {
   color: #9c2d28; font-size: 14px; line-height: 1.6;
   margin: 0 0 18px; overflow-wrap: anywhere;
@@ -203,4 +203,33 @@ footer { padding: 16px 24px 26px; text-align: center; font-size: 12px; color: va
   .planner-range { grid-template-columns: 1fr; gap: 0; }
   .team .planner-navigation h3 { font-size: 18px; }
   .planner-scroll { max-height: 540px; }
+}
+
+.week-picker {
+  display: grid; grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px; max-width: 680px; margin: 18px 0;
+}
+.week-picker-heading {
+  text-align: center; padding: 8px 0; font-size: 12px;
+}
+.week-picker-day {
+  min-width: 0; min-height: 66px; padding: 7px 3px;
+  border: 1px solid #a6c5bb; border-radius: 7px;
+  background: #eff7f3; color: #184f43; cursor: pointer; font: inherit;
+}
+.week-picker-day span, .week-picker-day small { display: block; }
+.week-picker-day small { font-size: 10px; margin-top: 5px; }
+.week-picker-day:disabled {
+  background: #f3f5f6; color: #7a858d;
+  border-color: #e0e5e8; cursor: not-allowed;
+}
+.week-picker-day.week-picker-covered { background: #e3eaf0; color: #40566a; }
+.week-picker-day[aria-pressed="true"] {
+  background: #116b60; color: #fff; box-shadow: 0 0 0 2px #116b60;
+}
+.schedules[aria-busy="true"] .button,
+.schedules[aria-busy="true"] .week-picker-day { cursor: wait; }
+@media (max-width: 540px) {
+  .week-picker { gap: 3px; }
+  .week-picker-day { min-height: 62px; font-size: 13px; }
 }

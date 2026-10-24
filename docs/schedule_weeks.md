@@ -52,3 +52,22 @@ late responses from a previous account are ignored.
 
 Week selection and shift editing will be added with the draft builder.
 Browser verification of this index and creation form remains pending.
+
+## Week-start month picker refinement
+
+The creation form now uses a month calendar. Only the configured week-start
+weekday is selectable. Dates whose seven-day range overlaps any existing
+schedule are disabled; draft coverage is labeled Draft exists.
+
+Selecting an available date enables the separate Create blank week button.
+Successful creation reloads the calendar and disables the covered date.
+Coverage queries include the neighboring dates needed for month-boundary
+and changed-week-start overlap checks.
+
+A concurrent creation conflict refreshes the calendar instead of leaving
+the form in a waiting state. Disabled buttons use a not-allowed cursor;
+the schedule section uses a waiting cursor only during an active request.
+
+A future draft-removal operation can make a date selectable again after
+refresh. Draft deletion is not introduced by this UI refinement.
+Browser verification of the month picker remains pending.

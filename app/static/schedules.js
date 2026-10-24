@@ -11,56 +11,76 @@ export function createScheduleManager({api, expired}) {
 
   async function start(identity) {
     reset();
-    const permitted = identity.memberships.some(m =>
+    if (!identity.memberships.some(m =>
       m.permissions.some(p => p === "administrator" || p === "scheduler")
-    );
-    if (!permitted) return;
+    )) return;
+
     const generation = epoch;
     const active = () => generation === epoch;
-
+    const names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
     const panel = node("section");
     root = panel;
     panel.className = "team schedules";
     panel.setAttribute("aria-label", "Schedules");
     document.getElementById("account-view").append(panel);
     node("h2", "Schedules", panel);
-    node("p", "Browse schedule weeks or create a blank draft.", panel);
+    node("p", "Select an available week-start date, then create a blank draft.", panel);
 
     const status = node("p", "Loading workplaces…", panel);
     status.className = "team-status";
     status.setAttribute("role", "status");
+
     const controls = node("fieldset", "", panel);
-    node("legend", "Schedule list", controls);
+    node("legend", "Workplace and month", controls);
     const workplace = node("label", "Workplace", controls);
     const select = node("select", "", workplace);
-    const rangeLabel = node("label", "List weeks starting from", controls);
-    const rangeStart = node("input", "", rangeLabel);
-    rangeStart.type = "date";
-    rangeStart.min = "2000-01-01";
-    rangeStart.max = "9998-09-01";
-    rangeStart.required = true;
-    rangeStart.value = addDays(new Date().toISOString().slice(0, 10), -14);
+    const navigation = node("div", "", controls);
+    navigation.className = "planner-navigation";
 
-    const list = node("div", "", panel);
     const form = node("form", "", panel);
-    const createFields = node("fieldset", "", form);
-    node("legend", "Create blank week", createFields);
-    const policy = node("p", "", createFields);
-    const dateLabel = node("label", "Week start date", createFields);
-    const dateInput = node("input", "", dateLabel);
-    dateInput.type = "date";
-    dateInput.min = "2000-01-01";
-    dateInput.max = "9998-12-25";
-    dateInput.required = true;
-    const create = node("button", "Create blank week", createFields);
+    const fields = node("fieldset", "", form);
+    node("legend", "Create blank week", fields);
+    const policy = node("p", "", fields);
+    const calendar = node("div", "", fields);
+    const selection = node("p", "Choose an available week-start date.", fields);
+    selection.setAttribute("role", "status");
+    const create = node("button", "Create blank week", fields);
     create.type = "submit";
     create.className = "button secondary";
+    create.disabled = true;
+    const list = node("div", "", panel);
 
-    let busy = false, ready = false, state = null;
-    const names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+    let month = new Date().toISOString().slice(0, 7);
+    let state = null, selected = "", busy = false, ready = false;
     const say = text => { if (active()) status.textContent = text; };
     const url = () => "/api/v1/staff/locations/" +
       encodeURIComponent(select.value) + "/schedule-weeks";
+
+    function adjacentMonth(value, count) {
+      const date = new Date(value + "-01T12:00:00Z");
+      date.setUTCMonth(date.getUTCMonth() + count);
+      return date.toISOString().slice(0, 7);
+    }
+
+    function boundaries() {
+      return {
+        first: month + "-01",
+        last: addDays(adjacentMonth(month, 1) + "-01", -1)
+      };
+    }
+
+    function coveringWeek(day) {
+      return state.weeks.find(week =>
+        week.week_start_date <= addDays(day, 6) &&
+        addDays(week.week_start_date, 6) >= day
+      );
+    }
+
+    function validSelection() {
+      return ready && selected &&
+        weekday(selected) === state.location.week_start_day &&
+        !coveringWeek(selected);
+    }
 
     async function request(path, options = {}) {
       const response = await api(path, options);
@@ -70,15 +90,17 @@ export function createScheduleManager({api, expired}) {
         throw new Error("Please sign in again.");
       }
       if (!response.ok) {
-        throw new Error(
+        const error = new Error(
           response.status === 409
-            ? "A schedule already covers those dates, or workplace settings changed. Refresh the list."
+            ? "A schedule already covers those dates, or workplace settings changed."
             : response.status === 422
-            ? "Check the dates and choose the configured week-start day."
+            ? "Check the selected week and workplace settings."
             : response.status === 403 || response.status === 404
             ? "Schedule access is unavailable for this workplace."
-            : "The request was not confirmed. Refresh the list before trying again."
+            : "The request was not confirmed. Refresh the calendar before trying again."
         );
+        error.status = response.status;
+        throw error;
       }
       const result = await response.json();
       if (!active()) throw new Error("Account changed.");
@@ -88,106 +110,172 @@ export function createScheduleManager({api, expired}) {
     async function task(operation) {
       if (busy || !active()) return;
       busy = true;
-      controls.disabled = true;
-      createFields.disabled = true;
+      panel.setAttribute("aria-busy", "true");
+      controls.disabled = fields.disabled = true;
       try {
         await operation();
       } catch (error) {
         ready = false;
+        selected = "";
+        selection.textContent = "Refresh the calendar before choosing a week.";
         say(error.message);
       } finally {
         busy = false;
         if (active()) {
+          panel.setAttribute("aria-busy", "false");
           controls.disabled = false;
-          createFields.disabled = !ready;
+          fields.disabled = !ready;
+          create.disabled = !validSelection();
         }
       }
     }
 
-    function localToday(zone) {
-      const parts = new Intl.DateTimeFormat("en-US", {
-        timeZone: zone, year: "numeric", month: "2-digit", day: "2-digit"
-      }).formatToParts(new Date());
-      const get = key => parts.find(p => p.type === key).value;
-      return `${get("year")}-${get("month")}-${get("day")}`;
+    function renderCalendar() {
+      calendar.replaceChildren();
+      selected = "";
+      create.disabled = true;
+      selection.textContent = "Choose an available week-start date.";
+      const {first, last} = boundaries();
+      const grid = node("div", "", calendar);
+      grid.className = "week-picker";
+      grid.setAttribute("role", "group");
+      grid.setAttribute("aria-label", "Choose a schedule week");
+
+      for (const name of names) {
+        node("strong", name.slice(0, 3), grid).className = "week-picker-heading";
+      }
+      for (let n = 0; n < weekday(first); n++) {
+        node("span", "", grid).setAttribute("aria-hidden", "true");
+      }
+
+      const buttons = [];
+      for (let day = first; day <= last; day = addDays(day, 1)) {
+        const button = node("button", "", grid);
+        button.type = "button";
+        button.className = "week-picker-day";
+        node("span", String(Number(day.slice(-2))), button);
+
+        const correctDay = weekday(day) === state.location.week_start_day;
+        const covered = correctDay ? coveringWeek(day) : null;
+        const supported = day <= "9998-12-25";
+        button.disabled = !correctDay || !!covered || !supported;
+        button.setAttribute("aria-pressed", "false");
+
+        let explanation;
+        if (!supported) explanation = "Outside supported schedule dates";
+        else if (!correctDay) explanation = `Weeks begin ${names[state.location.week_start_day]}`;
+        else if (covered) {
+          explanation = covered.state === "draft" ? "Draft exists" : "Schedule exists";
+          node("small", explanation, button);
+          button.classList.add("week-picker-covered");
+        } else explanation = "Available week";
+
+        button.title = `${day}: ${explanation}`;
+        button.setAttribute("aria-label", `${day}: ${explanation}`);
+        button.addEventListener("click", () => {
+          if (!ready || busy || button.disabled) return;
+          selected = day;
+          for (const other of buttons) other.setAttribute("aria-pressed", "false");
+          button.setAttribute("aria-pressed", "true");
+          selection.textContent = `Selected week: ${day} – ${addDays(day, 6)}`;
+          create.disabled = !validSelection();
+        });
+        buttons.push(button);
+      }
+    }
+
+    function renderNavigation() {
+      navigation.replaceChildren();
+      const previous = action("←", navigation, () => moveMonth(-1));
+      previous.setAttribute("aria-label", "Previous month");
+      previous.disabled = month === "2000-01";
+      node("h3", new Intl.DateTimeFormat("en-US", {
+        month: "long", year: "numeric", timeZone: "UTC"
+      }).format(new Date(month + "-01T12:00:00Z")), navigation);
+      const next = action("→", navigation, () => moveMonth(1));
+      next.setAttribute("aria-label", "Next month");
+      next.disabled = month === "9998-12";
+    }
+
+    function moveMonth(count) {
+      const candidate = adjacentMonth(month, count);
+      if (candidate < "2000-01" || candidate > "9998-12") return;
+      month = candidate;
+      task(load);
     }
 
     async function load() {
-      if (!rangeStart.reportValidity()) return;
       ready = false;
+      selected = "";
+      create.disabled = true;
+      calendar.replaceChildren();
       list.replaceChildren();
-      say("Loading schedule weeks…");
-      const result = await request(
-        url() + "?start=" + rangeStart.value +
-        "&end=" + addDays(rangeStart.value, 90)
-      );
-      state = result;
-      const location = state.location;
-      policy.textContent = `Weeks begin ${names[location.week_start_day]}. Times use ${location.timezone}.`;
-      if (!dateInput.value) {
-        const today = localToday(location.timezone);
-        dateInput.value = addDays(
-          today, (location.week_start_day - weekday(today) + 7) % 7
-        );
-      }
+      say("Loading schedule calendar…");
+      renderNavigation();
 
+      const {first, last} = boundaries();
+      const rangeStart = addDays(first, -6) < "2000-01-01"
+        ? "2000-01-01" : addDays(first, -6);
+      const rangeEnd = addDays(last, 6) > "9998-12-31"
+        ? "9998-12-31" : addDays(last, 6);
+      state = await request(url() + "?start=" + rangeStart + "&end=" + rangeEnd);
+
+      policy.textContent = `Weeks begin ${names[state.location.week_start_day]}. Times use ${state.location.timezone}. Dates with an existing schedule cannot be selected.`;
+      ready = true;
+      renderCalendar();
+
+      const visible = state.weeks.filter(week =>
+        week.week_start_date <= last && addDays(week.week_start_date, 6) >= first
+      );
       node("h3", "Schedule weeks", list);
-      if (!state.weeks.length) {
-        node("p", "No schedule weeks in this date range.", list);
+      if (!visible.length) {
+        node("p", "No schedule weeks overlap this month.", list);
       } else {
         const entries = node("ul", "", list);
-        for (const week of state.weeks) {
+        for (const week of visible) {
           const item = node("li", "", entries);
-          node("strong",
-            `${week.week_start_date} – ${addDays(week.week_start_date, 6)}`, item);
+          node("strong", `${week.week_start_date} – ${addDays(week.week_start_date, 6)}`, item);
           node("span", ` · ${week.state.charAt(0).toUpperCase() + week.state.slice(1)}`, item);
         }
       }
-      ready = true;
-      say(`${state.weeks.length} schedule weeks shown.`);
+      say("Choose an available week-start date.");
     }
 
-    action("Refresh list", controls, () => {
-      if (rangeStart.reportValidity()) task(load);
-    });
-    select.addEventListener("change", () => {
-      dateInput.value = "";
-      task(load);
-    });
-    rangeStart.addEventListener("change", () => {
-      if (rangeStart.reportValidity()) task(load);
-    });
+    action("Refresh calendar", controls, () => task(load));
+    select.addEventListener("change", () => task(load));
 
     form.addEventListener("submit", event => {
       event.preventDefault();
-      if (!ready || busy || !form.reportValidity()) return;
-      if (weekday(dateInput.value) !== state.location.week_start_day) {
-        say(`Choose a ${names[state.location.week_start_day]} as the week start.`);
-        return;
-      }
-      const selectedDate = dateInput.value;
+      if (busy || !validSelection()) return;
+      const chosen = selected;
       const payload = {
-        week_start_date: selectedDate,
+        week_start_date: chosen,
         expected_location_revision: state.location.revision
       };
       task(async () => {
-        ready = false;
-        const created = await request(url(), {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-CSRF-Token": identity.csrf_token
-          },
-          body: JSON.stringify(payload)
-        });
-        rangeStart.value = selectedDate > rangeStart.max
-          ? rangeStart.max : selectedDate;
-        await load();
-        say(`Created draft week ${created.week_start_date} – ${addDays(created.week_start_date, 6)}.`);
+        try {
+          const created = await request(url(), {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-CSRF-Token": identity.csrf_token
+            },
+            body: JSON.stringify(payload)
+          });
+          await load();
+          say(`Created draft week ${created.week_start_date} – ${addDays(created.week_start_date, 6)}.`);
+        } catch (error) {
+          if (error.status === 409) {
+            await load();
+            say("The calendar was refreshed because that week or workplace settings changed. Choose another available date.");
+            return;
+          }
+          throw error;
+        }
       });
     });
 
-    controls.disabled = createFields.disabled = true;
+    controls.disabled = fields.disabled = true;
     await task(async () => {
       const locations = await request("/api/v1/staff/locations");
       if (!locations.length) {
@@ -203,6 +291,5 @@ export function createScheduleManager({api, expired}) {
       await load();
     });
   }
-
   return {start, reset};
 }
