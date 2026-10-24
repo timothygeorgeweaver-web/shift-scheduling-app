@@ -43,6 +43,8 @@ from app.my_unavailability_routes import router as my_unavailability_router
 app.include_router(my_unavailability_router)
 from app.unavailability_write_routes import router as unavailability_write_router
 app.include_router(unavailability_write_router)
+from app.planner_routes import router as planner_router
+app.include_router(planner_router)
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 

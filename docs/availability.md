@@ -146,3 +146,29 @@ verify legacy tables remain empty before retiring the old path.
 
 HTTP planner routes, additive bulk preview/commit, and the visual planner
 remain pending. No real employee planner blocks are seeded by migration 0012.
+
+## Private planner HTTP API
+
+GET /api/v1/me/planner/profiles returns the caller's active linked profiles.
+GET /api/v1/me/planner/{location}?start=YYYY-MM-DD returns exactly seven dates.
+PUT /api/v1/me/planner/{location} accepts first_date,
+expected_location_revision and one through seven changed-date records:
+date, expected_revision and cells.
+
+Reads and writes derive the employee from the live session. Writes require
+same-origin CSRF validation and use the atomic database save function.
+Responses are no-store. Stale revisions return 409, locked changed dates 423,
+invalid inputs 422, and unavailable employee profiles 404.
+
+Each date includes effective_cells and exact blocked minute intervals.
+Frozen snapshots take precedence. If a frozen historical interval is not on
+15-minute boundaries, effective_cells is null and the exact locked interval
+remains available for display; no rounding or editable approximation occurs.
+
+Disposable PostgreSQL HTTP checks cover persistence, independent clearing,
+CSRF/origin rejection, input validation, stale and locked whole-save rollback,
+audit failure rollback, snapshot projection and employee privacy.
+
+Production database state is unchanged by this API step.
+The old form editor remains connected pending the visual planner replacement.
+Additive bulk preview/commit and the visual planner remain pending.

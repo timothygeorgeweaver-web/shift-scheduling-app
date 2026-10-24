@@ -191,6 +191,9 @@ def verify(test_db, identities, location, own, other):
     denied(lambda: read(), "42501")
     denied(lambda: save([record(2, 0, [1])], policy=1), "42501")
 
+    from scripts.verify_planner_api import verify as verify_api
+    verify_api(test_db, identities, location, own, other)
+
     print("DATE_PLANNER_BLANK_READ_AND_EXACT_CELLS=PASS")
     print("ATOMIC_MULTI_DATE_SAVE_AND_INDEPENDENT_CLEAR=PASS")
     print("DATE_REVISIONS_AND_CONCURRENT_EDITS=PASS")
