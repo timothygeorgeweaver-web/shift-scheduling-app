@@ -21,7 +21,8 @@ def install(version, database, rehearse=False):
         "0009_availability_policy", "0010_private_unavailability_storage",
         "0011_employee_unavailability_writes",
         "0012_date_planner_storage", "0013_planner_bulk_scope",
-        "0014_retire_legacy_unavailability", "0015_draft_schedule_weeks"
+        "0014_retire_legacy_unavailability", "0015_draft_schedule_weeks",
+        "0016_draft_shift_slots"
     ), "Unsupported migration.")
     require(
         database == "shift_scheduling"
@@ -74,6 +75,7 @@ def install(version, database, rehearse=False):
         "0013_planner_bulk_scope": (set(), []),
         "0014_retire_legacy_unavailability": (set(), []),
         "0015_draft_schedule_weeks": (set(), []),
+        "0016_draft_shift_slots": (set(), []),
     }[version]
     normalized_expression = "to_jsonb(t)-ARRAY[" + ",".join(
         "'" + key + "'" for key in removed_keys
@@ -115,6 +117,11 @@ def install(version, database, rehearse=False):
                 "Unexpected schedule tables.")
         require(after["data"]["schedule_week"]["rows"] == 0,
                 "Migration seeded schedule weeks.")
+    if version == "0016_draft_shift_slots":
+        require(set(after["data"])-set(before["data"]) == {"shift_slot"},
+                "Unexpected shift tables.")
+        require(after["data"]["shift_slot"]["rows"] == 0,
+                "Migration seeded real shifts.")
     for table, value in before["data"].items():
         if table not in stripped | {"schema_migration"}:
             require(after["data"][table] == value,
@@ -147,6 +154,8 @@ def install(version, database, rehearse=False):
             "scheduling.lock_my_planner_scope(uuid)",
         "0015_draft_schedule_weeks":
             "scheduling.create_blank_schedule_week(uuid,date,integer)",
+        "0016_draft_shift_slots":
+            "scheduling.create_draft_shift(uuid,uuid,integer,timestamptz,timestamptz,text)",
     }[version]
     require(admin(f"""
         SELECT p.prosecdef

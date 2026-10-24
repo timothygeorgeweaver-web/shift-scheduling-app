@@ -154,6 +154,9 @@ def verify(test_db, identities, location):
     else:
         raise SystemExit("STOP: Runtime has direct draft-table access.")
 
+    from scripts.verify_shift_slots import verify as verify_shifts
+    verify_shifts(test_db, identities, location)
+
     print("BLANK_DRAFT_WEEK_CREATE_LIST_AND_PERSISTENCE=PASS")
     print("DRAFT_WEEK_STAFF_AUTHORIZATION_CSRF_AND_ISOLATION=PASS")
     print("WEEK_START_LOCATION_REVISION_AND_DUPLICATE_CHECKS=PASS")

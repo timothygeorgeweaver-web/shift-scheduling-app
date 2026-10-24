@@ -95,3 +95,25 @@ ambiguous/nonexistent local endpoints, and unchanged actual endpoints.
 
 This module is not yet connected to shift storage or browser controls.
 Shift-slot persistence and editing are the next Stage 3 slice.
+
+## Role-specific shift storage
+
+Migration 0016 adds shift_slot and controlled read/create functions.
+Slots retain role, actual UTC endpoints, note, revision and actor metadata.
+Generated values expose elapsed minutes, the approved meal estimate and
+estimated working minutes without storing a scheduled lunch interval.
+
+Only live administrators/schedulers can create slots in a Draft week.
+The role must be active and belong to the same location. The local start
+must belong to the schedule week; the end may be on the following date.
+Database checks independently validate time precision, civil-time ordering
+and unambiguous local endpoints.
+
+Creating a slot increments its parent week revision. A stale revision,
+invalid role, non-Draft state or audit failure leaves the complete operation
+unchanged. Multiple identical coverage slots are allowed for multiple workers.
+No employee is assigned by shift creation.
+
+The migration creates no real shifts and preserves existing schedules and
+unavailability. HTTP shift routes, browser creation/editing, removal controls,
+templates and copying remain pending.
