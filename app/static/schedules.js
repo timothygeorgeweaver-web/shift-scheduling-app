@@ -1,10 +1,13 @@
 import {node, action, addDays, weekday} from "/static/planner-grid.js?v=2";
+import {createShiftEditor} from "/static/shift-editor.js?v=1";
 
 export function createScheduleManager({api, expired}) {
-  let root = null, epoch = 0;
+  let root = null, epoch = 0, closeShifts = () => {};
 
   function reset() {
     epoch++;
+    closeShifts();
+    closeShifts = () => {};
     root?.remove();
     root = null;
   }
@@ -52,6 +55,18 @@ export function createScheduleManager({api, expired}) {
 
     let month = new Date().toISOString().slice(0, 7);
     let state = null, selected = "", busy = false, ready = false;
+    const shifts = createShiftEditor({
+      api, expired, identity, parent: panel,
+      onOpen(open) {
+        if (!active()) return;
+        controls.disabled = open || busy;
+        fields.disabled = open || busy || !ready;
+        list.querySelectorAll("button").forEach(button => {
+          button.disabled = open || busy;
+        });
+      }
+    });
+    closeShifts = () => shifts.destroy();
     const say = text => { if (active()) status.textContent = text; };
     const url = () => "/api/v1/staff/locations/" +
       encodeURIComponent(select.value) + "/schedule-weeks";
@@ -205,6 +220,7 @@ export function createScheduleManager({api, expired}) {
     }
 
     async function load() {
+      shifts.reset();
       ready = false;
       selected = "";
       create.disabled = true;
@@ -236,6 +252,9 @@ export function createScheduleManager({api, expired}) {
           const item = node("li", "", entries);
           node("strong", `${week.week_start_date} – ${addDays(week.week_start_date, 6)}`, item);
           node("span", ` · ${week.state.charAt(0).toUpperCase() + week.state.slice(1)}`, item);
+          action("Open week", item, () => {
+            if (!busy) shifts.open(select.value, week.id);
+          });
         }
       }
       say("Choose an available week-start date.");

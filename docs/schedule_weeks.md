@@ -143,3 +143,24 @@ rollback, staff isolation and non-Draft denial.
 
 The browser shift editor and shift change/removal operations remain pending.
 This API step changes no production database records.
+
+## Browser shift creation and week overview
+
+Schedule-list entries now offer Open week. The staff-only week view shows
+seven day columns, existing role-specific shifts, full local times,
+overnight markers, notes and estimated working minutes.
+
+Draft weeks provide an Add shift form with role, one of the week's dates,
+start/end times, explicit Ends next day and an optional note. No lunch-entry
+fields exist. The server-returned duration and automatic meal estimate appear
+on saved shift cards. New slots remain unassigned.
+
+The loaded week revision is sent with creation. Stale or uncertain outcomes
+require refresh; invalid input can be corrected. Unsaved shifts prompt before
+closing or refreshing. The outer schedule picker is disabled while a week
+is open, preventing workplace/month changes from discarding the form.
+
+Sign-out clears the editor, removes its unload handler and ignores late
+responses. This browser-only change uses regression and asset checks;
+existing PostgreSQL shift API certification remains applicable.
+Browser verification remains pending.
