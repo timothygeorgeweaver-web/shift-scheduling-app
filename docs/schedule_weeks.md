@@ -410,3 +410,22 @@ The draft view includes a collapsible shift-count summary by job type and
 starting day, ordered by configured job-type order. Overnight shifts count
 on their starting day. Weekly estimated working hours remain visible above
 the grid. This summary is not the Stage 4 employee daily-hours calculation.
+
+## Direct generic-week template editor redesign
+
+The owner requested direct template editing instead of requiring an
+intermediate scheduled week. Edit Template will open a generic Monday–
+Sunday planner. Create New Template will open the same planner blank.
+Both use 15-minute start cells, quarter-hour time choices, role ordering,
+floating shift details and an explicit whole-template save.
+
+The generic model represents weekday, start/end minutes, next-day flag,
+role and note without real scheduling dates or timezone resolution.
+Conversion preserves the existing independent snapshot format and supports
+all configured location week-start days. Duplicate coverage slots and
+Sunday-to-Monday overnight shifts remain distinct and exact.
+
+Off-grid saved times are rejected explicitly rather than rounded.
+Actual-date DST validation remains part of applying a template to a week.
+This first step adds only the pure model and tests. Direct persistence and
+the revised browser editor remain pending.
