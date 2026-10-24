@@ -201,3 +201,33 @@ Same-origin CSRF, profile privacy and inactive-account checks apply.
 Migration 0013 adds only a controlled transaction-scope function and its
 migration record. The visual planner and retirement of the legacy editor
 remain pending; keep the server stopped during the remaining transition.
+
+## Seven-day planner screens
+
+The form-based unavailability editor is replaced by a seven-column planner.
+The main calendar and blank mass-edit template use the same planner-grid.js
+component with 96 local-time cells per date, sticky date/time headings,
+vertical scrolling, horizontal scrolling on narrow screens, and shared styling.
+
+Mouse clicks toggle cells; mouse dragging paints continuous cells within a
+day. Touch taps toggle cells while preserving scrolling. Arrow keys move
+between cells; native button Space/Enter activation toggles them.
+
+The month heading includes both months or years when necessary. Navigation
+moves exactly seven days. Main edits use explicit Save changes and retain
+per-date revisions; navigation and workplace changes offer discard prompts.
+
+Set Recurring Unavailability opens a blank matching planner with inclusive
+date controls. The representative week can be browsed without changing the
+weekly template. Preview lists changed and skipped locked dates before a
+separate confirmation submits additions. Template/date edits invalidate the
+preview. Failed or uncertain submission requires a fresh preview.
+
+Locked historical snapshots retain exact intervals; any partial-cell display
+is explicitly marked and cannot be edited. No browser storage is used.
+Sign-out removes private views and event listeners; old account responses
+are ignored.
+
+This step switches the browser to planner APIs. Legacy HTTP/database write
+retirement and real browser verification remain pending. Keep the server
+stopped until the transition is completed.
