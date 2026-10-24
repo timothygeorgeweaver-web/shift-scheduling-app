@@ -1,6 +1,7 @@
 import {node, action, addDays, weekday} from "/static/planner-grid.js?v=2";
-import {createShiftEditor} from "/static/shift-editor.js?v=7";
+import {createShiftEditor} from "/static/shift-editor.js?v=8";
 import {askTemplateName} from "/static/template-name-dialog.js?v=1";
+import {askTemplateChange} from "/static/template-manage-dialog.js?v=1";
 
 export function createScheduleManager({api, expired}) {
   let root = null, epoch = 0, closeShifts = () => {};
@@ -119,6 +120,7 @@ export function createScheduleManager({api, expired}) {
         const item = node("li", "", entries);
         node("strong", template.name, item);
         node("span", ` · ${template.shift_count} shifts`, item);
+        action("Manage template", item, () => manageTemplate(template));
         action("Use template", item, () => {
           if (busy || !ready) return;
           copySource = {...template, kind: "template"};
@@ -128,6 +130,43 @@ export function createScheduleManager({api, expired}) {
           fields.scrollIntoView({block: "start", behavior: "smooth"});
         });
       }
+    }
+
+    async function manageTemplate(template) {
+      if (busy || !ready) return;
+      const {first, last} = boundaries();
+      const weeks = state.weeks.filter(week =>
+        week.week_start_date <= last && addDays(week.week_start_date, 6) >= first
+      );
+      const change = await askTemplateChange(panel, template, weeks);
+      if (change === null || !active()) return;
+      task(async () => {
+        try {
+          await request(templateUrl() + "/" + encodeURIComponent(template.id), {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+              "X-CSRF-Token": identity.csrf_token
+            },
+            body: JSON.stringify({
+              ...change, expected_template_revision: template.revision
+            })
+          });
+          if (copySource?.kind === "template" && copySource.id === template.id) {
+            copySource = null;
+          }
+          await load();
+          say(change.active ? "Template changes saved." : "Template archived.");
+        } catch (error) {
+          if (error.status === 409) {
+            copySource = null;
+            await load();
+            say(error.message + " Refresh complete; reopen Manage template.");
+            return;
+          }
+          throw error;
+        }
+      });
     }
 
     async function saveAsTemplate(week) {

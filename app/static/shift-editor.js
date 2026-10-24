@@ -203,6 +203,50 @@ export function createShiftEditor({api, expired, identity, parent, onOpen}) {
     say("Editing saved shift.");
   }
 
+  function renderCoverage() {
+    const details = node("details", "", content);
+    node("summary", "Shift counts by starting day and job type", details);
+    node("p",
+      "Counts include overnight shifts on their starting date. " +
+      "These are coverage slots; employee assignments come in the next stage.",
+      details);
+    const table = node("table", "", details);
+    table.className = "schedule-summary";
+    const head = node("tr", "", node("thead", "", table));
+    node("th", "Job type", head).scope = "col";
+    const days = [];
+    for (let offset = 0; offset < 7; offset++) {
+      const day = addDays(data.week.week_start_date, offset);
+      days.push(day);
+      node("th", names[weekday(day)].slice(0, 3), head).scope = "col";
+    }
+    node("th", "Total", head).scope = "col";
+    const body = node("tbody", "", table);
+    const roleMap = new Map(roles.map(role => [role.id, role]));
+    const used = [...new Set(data.slots.map(slot => slot.role_id))];
+    used.sort((a, b) =>
+      (roleMap.get(a)?.display_order ?? 0) - (roleMap.get(b)?.display_order ?? 0) ||
+      (roleMap.get(a)?.name ?? a).localeCompare(roleMap.get(b)?.name ?? b)
+    );
+    for (const id of used) {
+      const slots = data.slots.filter(slot => slot.role_id === id);
+      const row = node("tr", "", body);
+      node("th", slots[0].role_name, row).scope = "row";
+      for (const day of days) {
+        node("td", String(slots.filter(slot =>
+          slot.local_start.slice(0, 10) === day).length), row);
+      }
+      node("td", String(slots.length), row);
+    }
+    const total = node("tr", "", body);
+    node("th", "Total shifts", total).scope = "row";
+    for (const day of days) {
+      node("td", String(data.slots.filter(slot =>
+        slot.local_start.slice(0, 10) === day).length), total);
+    }
+    node("td", String(data.slots.length), total);
+  }
+
   function render() {
     dismissPopup();
     content.replaceChildren();
@@ -214,6 +258,8 @@ export function createShiftEditor({api, expired, identity, parent, onOpen}) {
       `${data.slots.length} unassigned shifts · ${hours(data.slots.reduce(
         (sum, slot) => sum + slot.estimated_work_minutes, 0
       ))} estimated coverage`, content);
+
+    renderCoverage();
 
     createScheduleGrid(content, data, roles, (day, minute, position, anchor) => {
       if (busy || needsRefresh || !canClose()) return;

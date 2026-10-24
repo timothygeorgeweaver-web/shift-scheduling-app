@@ -393,3 +393,20 @@ revision checks and atomic before/after audit history. Existing schedule
 weeks and shifts remain unchanged. PostgreSQL certification covers rename,
 pattern replacement, stale edits, isolation, audit rollback and archive.
 Browser management controls are the next closing task.
+
+## Browser management and draft coverage summary
+
+Manage template opens a floating window for renaming, retaining its current
+pattern, replacing from a week displayed in the current calendar month,
+or archiving. Replacing and archiving require explicit confirmation.
+Unsaved changes require discard confirmation. Existing weeks remain
+independent; current template/source revisions are sent with changes.
+
+To edit a pattern, create a week from the template, edit that week's shifts,
+and replace the template pattern from that week. This reuses the full shift
+editor and avoids a second set of timing rules.
+
+The draft view includes a collapsible shift-count summary by job type and
+starting day, ordered by configured job-type order. Overnight shifts count
+on their starting day. Weekly estimated working hours remain visible above
+the grid. This summary is not the Stage 4 employee daily-hours calculation.

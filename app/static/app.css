@@ -465,3 +465,28 @@ dialog.shift-popup {
   padding: 8px 18px;
   font-size: 20px;
 }
+
+.role-order-dialog select {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  margin-top: 8px;
+}
+.role-order-dialog form > .button { margin: 10px 6px 0 0; }
+.schedule-summary {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 14px 0;
+  font-size: 12px;
+}
+.schedule-summary th, .schedule-summary td {
+  padding: 8px 4px;
+  border: 1px solid #dce3e8;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.schedule-summary th:first-child { text-align: left; }
+.schedule-summary thead, .schedule-summary tbody tr:last-child {
+  background: #edf2f7;
+  font-weight: 650;
+}
