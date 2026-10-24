@@ -57,7 +57,10 @@ def _audit(conn, location, action, entity_type, entity_id, before, after):
 
 
 def _columns(name_column):
-    return sql.SQL("id, {}, active, revision").format(sql.Identifier(name_column))
+    return sql.SQL("id, {}, active, revision{}").format(
+        sql.Identifier(name_column),
+        sql.SQL(", display_order" if name_column == "name" else ""),
+    )
 
 
 def create_record(token, location_id, kind, body):
@@ -66,13 +69,17 @@ def create_record(token, location_id, kind, body):
         location = _location(conn, location_id)
         row = conn.execute(
             sql.SQL(
-                "INSERT INTO {} (organization_id,location_id,{}) "
-                "VALUES (%s,%s,%s) RETURNING {}"
+                "INSERT INTO {} (organization_id,location_id,{}{}) "
+                "VALUES (%s,%s,%s{}) RETURNING {}"
             ).format(
                 sql.Identifier("scheduling", table),
-                sql.Identifier(name_column), _columns(name_column),
+                sql.Identifier(name_column),
+                sql.SQL(",display_order" if kind == "roles" else ""),
+                sql.SQL(",%s" if kind == "roles" else ""),
+                _columns(name_column),
             ),
-            (location["organization_id"], location["id"], body.name),
+            (location["organization_id"], location["id"], body.name)
+            + ((body.display_order,) if kind == "roles" else ()),
         ).fetchone()
         _audit(
             conn, location, table + ".created", table, row["id"], None, row
@@ -100,17 +107,21 @@ def edit_record(token, location_id, record_id, kind, body):
 
         row = conn.execute(
             sql.SQL(
-                "UPDATE {} SET {} = %s, active = %s, revision = revision + 1 "
+                "UPDATE {} SET {} = %s, active = %s, revision = revision + 1{} "
                 "WHERE id = %s AND location_id = %s RETURNING {}"
             ).format(
                 sql.Identifier("scheduling", table),
-                sql.Identifier(name_column), _columns(name_column),
+                sql.Identifier(name_column),
+                sql.SQL(", display_order = %s" if kind == "roles" else ""),
+                _columns(name_column),
             ),
             (
                 body.name if body.name is not None else before[name_column],
                 body.active if body.active is not None else before["active"],
-                record_id, location_id,
-            ),
+            ) + ((
+                body.display_order if body.display_order is not None
+                else before["display_order"],
+            ) if kind == "roles" else ()) + (record_id, location_id),
         ).fetchone()
         _audit(
             conn, location, table + ".updated", table, row["id"], before, row

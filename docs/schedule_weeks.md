@@ -249,3 +249,18 @@ inside the dialog as well as in the week status.
 
 The page has responsive side margins up to 48 CSS pixels.
 The schedule itself continues to use page scrolling.
+
+## Editable job-type display order
+
+Job-role creation and editing accept display_order, a strict integer from
+0 through 9999. Existing roles default to 0. Lower numbers appear first;
+matching values use name and role ID as deterministic tie-breakers.
+
+Team forms expose Display order. The schedule grid uses the stored value
+to group shifts, then sorts shifts of the same role by actual ending
+instant and shift ID. Refresh an already-open week after changing job
+order to load the new order.
+
+Order-only edits retain staff revision locking and atomic audit writes.
+Disposable PostgreSQL checks cover validation, stale/concurrent edits,
+business isolation and audit rollback.

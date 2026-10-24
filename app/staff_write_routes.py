@@ -6,7 +6,9 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from app.auth_routes import _check_origin, _csrf, _token
-from app.staff_models import CreateStaff, EditStaff, SetQualification
+from app.staff_models import (
+    CreateStaff, EditStaff, SetQualification, CreateRole, EditRole,
+)
 from app import staff_writes
 
 router = APIRouter(prefix="/api/v1/staff", tags=["staff"])
@@ -42,14 +44,14 @@ def edit_employee(
 
 @router.post("/locations/{location_id}/roles", status_code=201)
 def create_role(
-    location_id: UUID, body: CreateStaff, token: str = Depends(mutation_token)
+    location_id: UUID, body: CreateRole, token: str = Depends(mutation_token)
 ):
     return staff_writes.create_record(token, location_id, "roles", body)
 
 
 @router.patch("/locations/{location_id}/roles/{role_id}")
 def edit_role(
-    location_id: UUID, role_id: UUID, body: EditStaff,
+    location_id: UUID, role_id: UUID, body: EditRole,
     token: str = Depends(mutation_token),
 ):
     return staff_writes.edit_record(token, location_id, role_id, "roles", body)

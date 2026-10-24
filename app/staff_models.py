@@ -39,3 +39,17 @@ class EditStaff(StaffInput):
 class SetQualification(StaffInput):
     expected_revision: StrictInt = Field(ge=0)
     active: StrictBool
+
+
+class CreateRole(CreateStaff):
+    display_order: StrictInt = Field(default=0, ge=0, le=9999)
+
+
+class EditRole(EditStaff):
+    display_order: StrictInt | None = Field(default=None, ge=0, le=9999)
+
+    @model_validator(mode="after")
+    def require_change(self):
+        if self.name is None and self.active is None and self.display_order is None:
+            raise ValueError("A change is required.")
+        return self

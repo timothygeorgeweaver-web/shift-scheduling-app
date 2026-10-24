@@ -22,7 +22,8 @@ def install(version, database, rehearse=False):
         "0011_employee_unavailability_writes",
         "0012_date_planner_storage", "0013_planner_bulk_scope",
         "0014_retire_legacy_unavailability", "0015_draft_schedule_weeks",
-        "0016_draft_shift_slots", "0017_edit_remove_draft_shifts"
+        "0016_draft_shift_slots", "0017_edit_remove_draft_shifts",
+        "0018_job_role_display_order"
     ), "Unsupported migration.")
     require(
         database == "shift_scheduling"
@@ -77,6 +78,7 @@ def install(version, database, rehearse=False):
         "0015_draft_schedule_weeks": (set(), []),
         "0016_draft_shift_slots": (set(), []),
         "0017_edit_remove_draft_shifts": (set(), []),
+        "0018_job_role_display_order": ({"job_role"}, ["display_order"]),
     }[version]
     normalized_expression = "to_jsonb(t)-ARRAY[" + ",".join(
         "'" + key + "'" for key in removed_keys
@@ -158,6 +160,8 @@ def install(version, database, rehearse=False):
         "0016_draft_shift_slots":
             "scheduling.create_draft_shift(uuid,uuid,integer,timestamptz,timestamptz,text)",
         "0017_edit_remove_draft_shifts":
+            "scheduling.change_draft_shift(uuid,uuid,integer,boolean,uuid,integer,timestamptz,timestamptz,text)",
+        "0018_job_role_display_order":
             "scheduling.change_draft_shift(uuid,uuid,integer,boolean,uuid,integer,timestamptz,timestamptz,text)",
     }[version]
     require(admin(f"""

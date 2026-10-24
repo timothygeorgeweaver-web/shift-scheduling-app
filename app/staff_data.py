@@ -78,8 +78,9 @@ def location_records(token: str, location_id, kind: str):
             WHERE location_id = %s ORDER BY lower(display_name), id
         """,
         "roles": """
-            SELECT id, name, active, revision FROM scheduling.job_role
-            WHERE location_id = %s ORDER BY lower(name), id
+            SELECT id, name, active, revision, display_order
+            FROM scheduling.job_role
+            WHERE location_id = %s ORDER BY display_order, lower(name), id
         """,
         "qualifications": """
             SELECT employee_id, job_role_id, active, revision

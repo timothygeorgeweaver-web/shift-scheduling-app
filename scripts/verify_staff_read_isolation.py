@@ -58,6 +58,9 @@ def main():
     )
     test_dsn = make_conninfo(**{**settings, "dbname": test_db})
 
+    from scripts.apply_reviewed_migration import install
+    install("0018_job_role_display_order", test_db)
+
     organizations = {key: str(uuid4()) for key in ("a", "b")}
     locations = {key: str(uuid4()) for key in ("a", "b")}
     employees = {key: str(uuid4()) for key in ("a", "b")}
@@ -201,6 +204,9 @@ def main():
 
         from scripts.verify_employee_account_creation import verify as verify_accounts
         verify_accounts(test_db, test_dsn, identities, locations)
+
+        from scripts.verify_role_order import verify as verify_order
+        verify_order(test_db, identities, locations)
 
         # These mutations affect only synthetic identities in the copy.
         admin(f"""

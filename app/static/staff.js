@@ -153,21 +153,39 @@ export function createStaffManager({api, expired}) {
       }
     }
 
+    function orderInput(value = 0) {
+      const input = document.createElement("input");
+      input.type = "number";
+      input.min = "0";
+      input.max = "9999";
+      input.step = "1";
+      input.required = true;
+      input.value = String(value);
+      return input;
+    }
+
     function addForm(kind, heading) {
       const form = document.createElement("form");
       const fields = document.createElement("fieldset");
       fields.append(element("legend", heading));
       const name = textInput();
-      fields.append(field("Name", name), submit("Add"));
+      const order = kind === "roles" ? orderInput() : null;
+      fields.append(field("Name", name));
+      if (order) fields.append(field("Display order (lower numbers first)", order));
+      fields.append(submit("Add"));
       form.append(fields);
       form.addEventListener("submit", event => {
         event.preventDefault();
+        if (!form.reportValidity()) return;
         if (!name.value.trim()) {
           name.setCustomValidity("Enter a name.");
           name.reportValidity();
           return;
         }
-        run(() => save(base() + kind, "POST", {name: name.value.trim()}));
+        run(() => save(base() + kind, "POST", {
+          name: name.value.trim(),
+          ...(order ? {display_order: order.valueAsNumber} : {}),
+        }));
       });
       name.addEventListener("input", () => name.setCustomValidity(""));
       return form;
@@ -179,11 +197,14 @@ export function createStaffManager({api, expired}) {
       fields.append(element("legend", "Edit details"));
       const name = textInput(record.display_name ?? record.name);
       const active = checkbox(record.active);
-      fields.append(field("Name", name), field("Active", active),
-        submit("Save details"));
+      const order = kind === "roles" ? orderInput(record.display_order ?? 0) : null;
+      fields.append(field("Name", name), field("Active", active));
+      if (order) fields.append(field("Display order (lower numbers first)", order));
+      fields.append(submit("Save details"));
       form.append(fields);
       form.addEventListener("submit", event => {
         event.preventDefault();
+        if (!form.reportValidity()) return;
         if (!name.value.trim()) {
           name.setCustomValidity("Enter a name.");
           name.reportValidity();
@@ -193,12 +214,12 @@ export function createStaffManager({api, expired}) {
           expected_revision: record.revision,
           name: name.value.trim(),
           active: active.checked,
+          ...(order ? {display_order: order.valueAsNumber} : {}),
         }));
       });
       name.addEventListener("input", () => name.setCustomValidity(""));
       return form;
     }
-
 
     function accountForm(employee) {
       const form = document.createElement("form");
