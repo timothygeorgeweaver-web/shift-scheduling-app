@@ -116,6 +116,15 @@ export function createShiftEditor({api, expired, identity, parent, onOpen}) {
     input.type = type;
     input.value = value;
     input.required = true;
+    if (type === "time") {
+      input.type = "text";
+      input.placeholder = "HH:MM";
+      input.maxLength = 5;
+      input.pattern = "(?:[01][0-9]|2[0-3]):[0-5][0-9]";
+      input.title = "Use 24-hour time, such as 09:15 or 17:30.";
+      input.autocomplete = "off";
+      input.spellcheck = false;
+    }
     return input;
   }
 
@@ -174,9 +183,9 @@ export function createShiftEditor({api, expired, identity, parent, onOpen}) {
       node("option", `${names[weekday(day)]} ${day}`, daySelect).value = day;
     }
     daySelect.value = selectedStart.day;
-    const start = field("Start time", "time", layout, clockMinute(selectedStart.minute));
+    const start = field("Start time (24-hour HH:MM)", "time", layout, clockMinute(selectedStart.minute));
     const defaultEnd = (selectedStart.minute + 60) % 1440;
-    const end = field("End time", "time", layout, clockMinute(defaultEnd));
+    const end = field("End time (24-hour HH:MM)", "time", layout, clockMinute(defaultEnd));
     start.step = end.step = "60";
 
     const nextLabel = node("label", "Ends next day", inputFields);

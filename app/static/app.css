@@ -325,3 +325,22 @@ footer { padding: 16px 24px 26px; text-align: center; font-size: 12px; color: va
 }
 .schedule-cell-add:hover { background: #edf4ff; }
 .schedule-cell-add:focus-visible { outline: 3px solid #3564a0; outline-offset: 1px; }
+
+/* Use the available workspace width for seven-day planners. */
+main { padding-left: 12px; padding-right: 12px; min-width: 0; }
+.account-card:has(.team:not([hidden])),
+.account-card:has(.unavailability) {
+  max-width: none;
+  min-width: 0;
+  padding: 24px;
+}
+.schedule-time-grid {
+  grid-template-columns: 60px repeat(7, minmax(0, 1fr));
+  min-width: 840px;
+}
+.schedule-grid-heading, .schedule-start-cell { min-width: 0; }
+.schedule-grid-heading { overflow-wrap: anywhere; }
+@media (max-width: 540px) {
+  .account-card:has(.team:not([hidden])),
+  .account-card:has(.unavailability) { padding: 12px; }
+}

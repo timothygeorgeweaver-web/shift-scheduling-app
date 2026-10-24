@@ -181,3 +181,8 @@ containing quarter-hour cell, with their exact start time displayed.
 
 Shift editing/removal and navigation between open schedule weeks remain
 pending. This change does not alter stored shifts or meal calculations.
+
+The signed-in workspace uses the available screen width for seven-day
+planners. Narrow screens retain horizontal scrolling.
+Shift entry uses validated 24-hour HH:MM text fields, independent of the
+browser's regional AM/PM preference.
