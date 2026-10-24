@@ -122,6 +122,9 @@ def verify(test_db, identities, location):
     require(fingerprint(test_db) == before,
             "Legacy denial checks changed database state.")
 
+    from scripts.verify_schedule_weeks import verify as verify_weeks
+    verify_weeks(test_db, identities, location)
+
     print("CURRENT_PLANNER_PROFILE_AUTHORIZATION=PASS")
     print("LEGACY_HTTP_ROUTES=REMOVED")
     print("LEGACY_DATABASE_READ_AND_WRITE_FUNCTIONS=DENIED")

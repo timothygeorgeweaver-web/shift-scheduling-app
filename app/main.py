@@ -43,6 +43,8 @@ from app.planner_routes import router as planner_router
 app.include_router(planner_router)
 from app.planner_bulk_routes import router as planner_bulk_router
 app.include_router(planner_bulk_router)
+from app.schedule_week_routes import router as schedule_week_router
+app.include_router(schedule_week_router)
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 

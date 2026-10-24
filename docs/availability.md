@@ -268,3 +268,13 @@ The mass-edit layout was refined after browser review:
 
 The revised JavaScript passed assistant-side Node syntax checks.
 Owner verification of this layout refinement remains pending.
+
+## Employee planner browser checkpoint
+
+The owner approved the generic mass-edit weekday layout after confirming
+the main planner, persistence, additive submission, independent corrections,
+discard prompts, locked dates and sign-out.
+
+The employee planner implementation is browser-verified. Publication-triggered
+snapshot creation and revalidation against actual assignments remain
+integration work for the scheduling/publishing stages.
