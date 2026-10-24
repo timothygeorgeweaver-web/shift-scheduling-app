@@ -209,6 +209,9 @@ def verify(test_db, identities, location, own, other):
         require(inactive.put(url, headers=headers, json=payload).status_code
                 == 404, "Inactive employee retained planner writes.")
 
+    from scripts.verify_planner_bulk import verify as verify_bulk
+    verify_bulk(test_db, identities, location, own, other)
+
     print("PRIVATE_PLANNER_HTTP_READ_SAVE_AND_CLEAR=PASS")
     print("PLANNER_HTTP_CSRF_ORIGIN_AND_VALIDATION=PASS")
     print("PLANNER_HTTP_STALE_LOCK_AND_AUDIT_ROLLBACK=PASS")

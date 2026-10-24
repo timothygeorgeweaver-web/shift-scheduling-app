@@ -20,7 +20,7 @@ def install(version, database, rehearse=False):
         "0007_account_access_management", "0008_location_settings",
         "0009_availability_policy", "0010_private_unavailability_storage",
         "0011_employee_unavailability_writes",
-        "0012_date_planner_storage"
+        "0012_date_planner_storage", "0013_planner_bulk_scope"
     ), "Unsupported migration.")
     require(
         database == "shift_scheduling"
@@ -70,6 +70,7 @@ def install(version, database, rehearse=False):
         "0010_private_unavailability_storage": (set(), []),
         "0011_employee_unavailability_writes": (set(), []),
         "0012_date_planner_storage": (set(), []),
+        "0013_planner_bulk_scope": (set(), []),
     }[version]
     normalized_expression = "to_jsonb(t)-ARRAY[" + ",".join(
         "'" + key + "'" for key in removed_keys
@@ -132,6 +133,8 @@ def install(version, database, rehearse=False):
             "scheduling.write_my_unavailability(uuid,text,date,integer,integer,jsonb)",
         "0012_date_planner_storage":
             "scheduling.save_my_planner(uuid,date,integer,jsonb)",
+        "0013_planner_bulk_scope":
+            "scheduling.lock_my_planner_scope(uuid)",
     }[version]
     require(admin(f"""
         SELECT p.prosecdef

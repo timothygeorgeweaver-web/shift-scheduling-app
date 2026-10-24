@@ -172,3 +172,32 @@ audit failure rollback, snapshot projection and employee privacy.
 Production database state is unchanged by this API step.
 The old form editor remains connected pending the visual planner replacement.
 Additive bulk preview/commit and the visual planner remain pending.
+
+## Additive mass-edit preview and submission
+
+POST /api/v1/me/planner/{location}/bulk/preview accepts first_date,
+last_date and weekly_cells keyed 0 Monday through 6 Sunday.
+The inclusive range supports up to 366 calendar dates per submission.
+
+Preview returns actual changed dates, added cells, unchanged matching-date
+count, skipped locked dates with reasons, and a preview_id. Blank template
+weekdays make no changes. Preview persists no employee data.
+
+POST /api/v1/me/planner/{location}/bulk/apply accepts the same selection plus
+expected_preview. The server independently rebuilds the preview while holding
+the controlled organization/location/employee transaction scope. The preview
+fingerprint binds session, employee, location policy, selection and matching
+date revisions/cells/locks. Changed relevant state returns 409 for re-preview.
+
+All editable additions are unioned with existing cells. Each seven-day save
+and its audit inserts runs on the SAME connection and transaction; failure
+in a later week rolls back earlier weeks too. Final gate/session checks
+prevent silently changing the confirmed scope during submission.
+
+Locked dates remain unchanged. Independent later date corrections do not
+cascade. Reapplying already-present blocks makes no effective changes.
+Same-origin CSRF, profile privacy and inactive-account checks apply.
+
+Migration 0013 adds only a controlled transaction-scope function and its
+migration record. The visual planner and retirement of the legacy editor
+remain pending; keep the server stopped during the remaining transition.
