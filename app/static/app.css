@@ -424,3 +424,34 @@ dialog.shift-popup {
 .shift-popup textarea { margin-top: 4px; padding: 7px; }
 .shift-popup form .button { padding: 8px 10px; margin-top: 8px; }
 .shift-popup .shift-delete { margin-left: 6px; }
+
+.role-order-dialog {
+  width: min(520px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+  padding: 22px;
+  border: 1px solid #aebfca;
+  border-radius: 12px;
+  background: #fff;
+  color: #182b3a;
+  box-shadow: 0 12px 42px #18344740;
+}
+.role-order-dialog::backdrop { background: #182b3a33; }
+.role-order-dialog h3 { margin-top: 0; }
+.role-order-list { list-style: none; padding: 0; margin: 16px 0; }
+.role-order-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid #cbd7df;
+  border-radius: 7px;
+  background: #f7fafb;
+  cursor: grab;
+}
+.role-order-item:active { cursor: grabbing; }
+.role-order-item strong { flex: 1; }
+.role-order-handle { font-size: 24px; color: #62727e; }
+.role-order-move { display: flex; gap: 4px; }
+.role-order-move .button { min-height: 32px; padding: 4px 9px; }
+.role-order-actions { display: flex; gap: 10px; }

@@ -73,3 +73,25 @@ def history(
     token: str = Depends(_token),
 ):
     return staff_writes.history(token, location_id, limit)
+
+
+from pydantic import BaseModel, ConfigDict, Field, StrictInt
+
+
+class OrderedRole(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    id: UUID
+    expected_revision: StrictInt = Field(ge=1, le=2147483646)
+
+
+class ReorderRoles(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    roles: list[OrderedRole] = Field(max_length=10000)
+
+
+@router.post("/locations/{location_id}/roles/order")
+def reorder_roles(
+    location_id: UUID, body: ReorderRoles,
+    token: str = Depends(mutation_token),
+):
+    return staff_writes.reorder_roles(token, location_id, body)

@@ -1,4 +1,4 @@
-import {createStaffManager} from "/static/staff.js?v=6";
+import {createStaffManager} from "/static/staff.js?v=7";
 import {createUnavailabilityManager} from "/static/unavailability.js?v=3";
 import {createScheduleManager} from "/static/schedules.js?v=10";
 

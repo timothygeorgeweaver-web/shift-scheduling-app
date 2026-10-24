@@ -208,3 +208,43 @@ def history(token, location_id, limit):
             """,
             (location_id, limit),
         ).fetchall()
+
+
+def reorder_roles(token, location_id, body):
+    with staff_connection(token, write=True) as conn:
+        location = _location(conn, location_id)
+        rows = conn.execute(
+            "SELECT id,name,active,revision,display_order "
+            "FROM scheduling.job_role WHERE location_id=%s "
+            "ORDER BY id FOR UPDATE",
+            (location_id,),
+        ).fetchall()
+        current = {row["id"]: row for row in rows}
+        requested = [item.id for item in body.roles]
+        if len(set(requested)) != len(requested):
+            raise HTTPException(status_code=422, detail="Job types must appear once.")
+        if set(requested) != set(current):
+            _stale()
+        for item in body.roles:
+            if current[item.id]["revision"] != item.expected_revision:
+                _stale()
+
+        result = []
+        for position, item in enumerate(body.roles):
+            before = current[item.id]
+            if before["display_order"] == position:
+                result.append(before)
+                continue
+            if before["revision"] >= 2147483647:
+                _stale()
+            after = conn.execute(
+                "UPDATE scheduling.job_role "
+                "SET display_order=%s,revision=revision+1 "
+                "WHERE id=%s AND location_id=%s "
+                "RETURNING id,name,active,revision,display_order",
+                (position, item.id, location_id),
+            ).fetchone()
+            _audit(conn, location, "job_role.reordered", "job_role",
+                   item.id, before, after)
+            result.append(after)
+        return result

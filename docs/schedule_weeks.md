@@ -264,3 +264,19 @@ order to load the new order.
 Order-only edits retain staff revision locking and atomic audit writes.
 Disposable PostgreSQL checks cover validation, stale/concurrent edits,
 business isolation and audit rollback.
+
+## Drag-and-drop job-type arrangement
+
+Arrange job types opens a floating window listing all roles, including
+inactive roles with a label. Dragging or Move up/down changes a local
+preview. Save order submits all role IDs and expected revisions in one
+transaction. Cancel/Escape checks for unsaved changes.
+
+The API locks existing role rows in ID order, rejects duplicate IDs,
+changed list membership and stale revisions, and audits each changed rank.
+An audit failure rolls back the entire arrangement. A newly created role
+after the transaction's list read appears on the next refresh and can then
+be arranged. Individual numeric ordering fields are hidden in Team forms.
+
+Refresh an already-open schedule week to load the saved role arrangement.
+Within each role, shifts still sort by earliest actual finish.

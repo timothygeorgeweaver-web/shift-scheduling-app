@@ -207,6 +207,8 @@ def main():
 
         from scripts.verify_role_order import verify as verify_order
         verify_order(test_db, identities, locations)
+        from scripts.verify_role_reorder import verify as verify_reorder
+        verify_reorder(test_db, identities, locations)
 
         # These mutations affect only synthetic identities in the copy.
         admin(f"""

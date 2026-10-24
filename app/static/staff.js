@@ -153,25 +153,12 @@ export function createStaffManager({api, expired}) {
       }
     }
 
-    function orderInput(value = 0) {
-      const input = document.createElement("input");
-      input.type = "number";
-      input.min = "0";
-      input.max = "9999";
-      input.step = "1";
-      input.required = true;
-      input.value = String(value);
-      return input;
-    }
-
     function addForm(kind, heading) {
       const form = document.createElement("form");
       const fields = document.createElement("fieldset");
       fields.append(element("legend", heading));
       const name = textInput();
-      const order = kind === "roles" ? orderInput() : null;
       fields.append(field("Name", name));
-      if (order) fields.append(field("Display order (lower numbers first)", order));
       fields.append(submit("Add"));
       form.append(fields);
       form.addEventListener("submit", event => {
@@ -184,7 +171,6 @@ export function createStaffManager({api, expired}) {
         }
         run(() => save(base() + kind, "POST", {
           name: name.value.trim(),
-          ...(order ? {display_order: order.valueAsNumber} : {}),
         }));
       });
       name.addEventListener("input", () => name.setCustomValidity(""));
@@ -197,9 +183,7 @@ export function createStaffManager({api, expired}) {
       fields.append(element("legend", "Edit details"));
       const name = textInput(record.display_name ?? record.name);
       const active = checkbox(record.active);
-      const order = kind === "roles" ? orderInput(record.display_order ?? 0) : null;
       fields.append(field("Name", name), field("Active", active));
-      if (order) fields.append(field("Display order (lower numbers first)", order));
       fields.append(submit("Save details"));
       form.append(fields);
       form.addEventListener("submit", event => {
@@ -214,7 +198,6 @@ export function createStaffManager({api, expired}) {
           expected_revision: record.revision,
           name: name.value.trim(),
           active: active.checked,
-          ...(order ? {display_order: order.valueAsNumber} : {}),
         }));
       });
       name.addEventListener("input", () => name.setCustomValidity(""));
@@ -421,6 +404,134 @@ export function createStaffManager({api, expired}) {
       return panel;
     }
 
+    function arrangeRoles(roles) {
+      const dialog = element("dialog", "", "role-order-dialog");
+      dialog.setAttribute("aria-label", "Arrange job types");
+      root.append(dialog);
+      dialog.append(element("h3", "Arrange job types"));
+      dialog.append(element("p",
+        "Drag job types into order. The first job type appears first in the planner.",
+        "description"));
+      const message = element("p", "", "team-status");
+      message.setAttribute("role", "status");
+      dialog.append(message);
+      const list = element("ol", "", "role-order-list");
+      dialog.append(list);
+      let ordered = [...roles], dragged = null, dirty = false, blocked = false;
+
+      const buttons = element("div", "", "role-order-actions");
+      const saveOrder = element("button", "Save order", "button secondary");
+      saveOrder.type = "button";
+      const cancel = element("button", "Cancel", "button secondary");
+      cancel.type = "button";
+      buttons.append(saveOrder, cancel);
+      dialog.append(buttons);
+
+      function close() {
+        if (busy) return;
+        if (dirty && !window.confirm("Discard the unsaved job-type order?")) return;
+        dialog.close();
+        dialog.remove();
+      }
+
+      function move(id, targetId, after) {
+        if (busy || blocked || id === targetId) return;
+        const item = ordered.find(role => role.id === id);
+        if (!item) return;
+        const rest = ordered.filter(role => role.id !== id);
+        const index = rest.findIndex(role => role.id === targetId);
+        if (index < 0) return;
+        rest.splice(index + (after ? 1 : 0), 0, item);
+        ordered = rest;
+        dirty = true;
+        message.textContent = "Unsaved order.";
+        draw();
+      }
+
+      function draw() {
+        list.replaceChildren();
+        ordered.forEach((role, index) => {
+          const row = element("li", "", "role-order-item");
+          row.draggable = !busy && !blocked;
+          row.append(element("span", "⠿", "role-order-handle"));
+          row.append(element("strong",
+            role.name + (role.active ? "" : " · Inactive")));
+          row.addEventListener("dragstart", event => {
+            if (busy || blocked) { event.preventDefault(); return; }
+            dragged = role.id;
+            event.dataTransfer.effectAllowed = "move";
+            event.dataTransfer.setData("text/plain", role.id);
+          });
+          row.addEventListener("dragend", () => { dragged = null; });
+          row.addEventListener("dragover", event => {
+            if (!dragged || busy || blocked) return;
+            event.preventDefault();
+            event.dataTransfer.dropEffect = "move";
+          });
+          row.addEventListener("drop", event => {
+            event.preventDefault();
+            if (!dragged || busy || blocked) return;
+            const box = row.getBoundingClientRect();
+            move(dragged, role.id, event.clientY > box.top + box.height / 2);
+            dragged = null;
+          });
+
+          const controls = element("span", "", "role-order-move");
+          for (const [label, offset] of [["↑", -1], ["↓", 1]]) {
+            const button = element("button", label, "button secondary");
+            button.type = "button";
+            button.disabled = blocked || busy || index + offset < 0 ||
+              index + offset >= ordered.length;
+            button.setAttribute("aria-label",
+              `Move ${role.name} ${offset < 0 ? "up" : "down"}`);
+            button.addEventListener("click", () => {
+              const target = ordered[index + offset];
+              if (target) move(role.id, target.id, offset > 0);
+            });
+            controls.append(button);
+          }
+          row.append(controls);
+          list.append(row);
+        });
+        saveOrder.disabled = busy || blocked || !ordered.length;
+      }
+
+      cancel.addEventListener("click", close);
+      dialog.addEventListener("cancel", event => {
+        event.preventDefault();
+        close();
+      });
+      saveOrder.addEventListener("click", () => {
+        if (busy || blocked) return;
+        run(async () => {
+          saveOrder.disabled = cancel.disabled = true;
+          message.textContent = "Saving order…";
+          try {
+            await request(base() + "roles/order", "POST", {
+              roles: ordered.map(role => ({
+                id: role.id, expected_revision: role.revision
+              }))
+            });
+            dirty = false;
+            dialog.close();
+            dialog.remove();
+            await load();
+            status.textContent = "Job-type order saved. Refresh an open schedule week to see it.";
+          } catch (error) {
+            blocked = true;
+            message.textContent = error.message +
+              " Close this window and refresh Team before trying again.";
+            throw error;
+          } finally {
+            cancel.disabled = false;
+            saveOrder.disabled = blocked;
+          }
+        });
+      });
+      draw();
+      dialog.showModal();
+    }
+
     async function load() {
       const prefix = base();
       const [employees, roles, qualifications, history] = await Promise.all(
@@ -477,7 +588,13 @@ export function createStaffManager({api, expired}) {
         staff.append(details);
       }
       const jobs = element("section");
-      jobs.append(element("h3", "Job roles"), addForm("roles", "Add job role"));
+      jobs.append(element("h3", "Job roles"));
+      const arrange = element("button", "Arrange job types", "button secondary");
+      arrange.type = "button";
+      arrange.addEventListener("click", () => {
+        if (!busy) arrangeRoles(roles);
+      });
+      jobs.append(arrange, addForm("roles", "Add job role"));
       if (!roles.length) jobs.append(element("p", "No job roles added yet."));
       for (const role of roles) {
         const details = document.createElement("details");
