@@ -383,3 +383,44 @@ button.schedule-start-card:focus-visible {
   border-color: #d9a4a0;
   margin-left: 12px;
 }
+
+/* Small page margins around the full workspace. */
+main {
+  padding-left: clamp(16px, 4vw, 48px);
+  padding-right: clamp(16px, 4vw, 48px);
+}
+
+/* Floating editor: positioned beside the selected shift or starting cell. */
+dialog.shift-popup {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  width: min(390px, calc(100vw - 32px));
+  max-width: calc(100vw - 32px);
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+  padding: 16px;
+  border: 1px solid #aebfca;
+  border-radius: 12px;
+  box-shadow: 0 12px 42px #18344740;
+  background: #fff;
+  color: #182b3a;
+  font: inherit;
+}
+.shift-popup::backdrop { background: #182b3a12; }
+.shift-popup-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.shift-popup-bar > .button { min-height: 32px; padding: 5px 10px; }
+.shift-popup .team-status { margin: 8px 0; font-size: 13px; }
+.shift-popup fieldset { margin: 8px 0 0; padding: 10px; }
+.shift-popup .shift-inputs { gap: 8px; }
+.shift-popup label { margin: 6px 0; font-size: 12px; }
+.shift-popup select { width: 100%; min-width: 0; padding: 7px; }
+.shift-popup p { font-size: 12px; line-height: 1.4; }
+.shift-popup textarea { margin-top: 4px; padding: 7px; }
+.shift-popup form .button { padding: 8px 10px; margin-top: 8px; }
+.shift-popup .shift-delete { margin-left: 6px; }

@@ -71,13 +71,13 @@ export function createScheduleGrid(parent, data, roles, choose, scrollTop = 1408
           card.setAttribute("aria-label",
             `Edit ${shift.role_name}, ${shift.local_start.slice(0, 10)}, ` +
             `${shift.local_start.slice(11, 16)} to ${shift.local_end.slice(0, 16)}`);
-          card.addEventListener("click", () => openShift(shift));
+          card.addEventListener("click", () => openShift(shift, card));
         }
 
       }
       if (data.week.state === "draft") {
         const add = action("+ Add shift", box, () => {
-          choose(day, cell * 15, scroll.scrollTop);
+          choose(day, cell * 15, scroll.scrollTop, add);
         });
         add.className = "schedule-cell-add";
         add.setAttribute("aria-label", `Add shift starting ${day} at ${time}`);

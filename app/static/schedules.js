@@ -1,5 +1,5 @@
 import {node, action, addDays, weekday} from "/static/planner-grid.js?v=2";
-import {createShiftEditor} from "/static/shift-editor.js?v=6";
+import {createShiftEditor} from "/static/shift-editor.js?v=7";
 
 export function createScheduleManager({api, expired}) {
   let root = null, epoch = 0, closeShifts = () => {};

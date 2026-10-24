@@ -234,3 +234,18 @@ choices, from 00:00 through 23:45. Midnight finishes use 00:00 together
 with Ends next day. Existing off-grid times are not silently rounded:
 editing displays a placeholder requiring a quarter-hour selection before
 saving. Cancel and deletion remain available without changing those times.
+
+## Floating shift editor
+
+Add and Edit shift open in a compact dialog positioned beside the clicked
+cell or card. It uses the right side when space permits, otherwise the
+left, with a centered fallback for narrow screens. Position is clamped to
+the viewport and recalculated on resize.
+
+The dialog retains quarter-hour dropdowns, revision checks, deletion
+confirmation and unsaved-change protection. Close, Escape and clicking
+outside the panel use the same discard protection. Request errors appear
+inside the dialog as well as in the week status.
+
+The page has responsive side margins up to 48 CSS pixels.
+The schedule itself continues to use page scrolling.
