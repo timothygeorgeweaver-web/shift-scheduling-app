@@ -406,9 +406,9 @@ export function createStaffManager({api, expired}) {
 
     function arrangeRoles(roles) {
       const dialog = element("dialog", "", "role-order-dialog");
-      dialog.setAttribute("aria-label", "Arrange job types");
+      dialog.setAttribute("aria-label", "Change Job Type Order");
       root.append(dialog);
-      dialog.append(element("h3", "Arrange job types"));
+      dialog.append(element("h3", "Change Job Type Order"));
       dialog.append(element("p",
         "Drag job types into order. The first job type appears first in the planner.",
         "description"));
@@ -589,7 +589,7 @@ export function createStaffManager({api, expired}) {
       }
       const jobs = element("section");
       jobs.append(element("h3", "Job roles"));
-      const arrange = element("button", "Arrange job types", "button secondary");
+      const arrange = element("button", "Change Job Type Order", "button secondary");
       arrange.type = "button";
       arrange.addEventListener("click", () => {
         if (!busy) arrangeRoles(roles);
