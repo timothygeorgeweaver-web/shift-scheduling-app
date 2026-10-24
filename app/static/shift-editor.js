@@ -112,20 +112,25 @@ export function createShiftEditor({api, expired, identity, parent, onOpen}) {
 
   function field(text, type, parent, value) {
     const label = node("label", text, parent);
-    const input = node("input", "", label);
-    input.type = type;
-    input.value = value;
-    input.required = true;
-    if (type === "time") {
-      input.type = "text";
-      input.placeholder = "HH:MM";
-      input.maxLength = 5;
-      input.pattern = "(?:[01][0-9]|2[0-3]):[0-5][0-9]";
-      input.title = "Use 24-hour time, such as 09:15 or 17:30.";
-      input.autocomplete = "off";
-      input.spellcheck = false;
+    const select = node("select", "", label);
+    select.required = true;
+    for (let minute = 0; minute < 1440; minute += 15) {
+      const time = clockMinute(minute);
+      node("option", time, select).value = time;
     }
-    return input;
+    const supported = Array.from(select.options).some(
+      option => option.value === value
+    );
+    if (!supported) {
+      const placeholder = node("option",
+        `Saved time ${value} — select a 15-minute time`, select);
+      placeholder.value = "";
+      placeholder.disabled = true;
+      select.value = "";
+    } else {
+      select.value = value;
+    }
+    return select;
   }
 
   function chooseExisting(shift) {
@@ -221,7 +226,6 @@ export function createShiftEditor({api, expired, identity, parent, onOpen}) {
         Number(editing.local_end.slice(14, 16))
       : (selectedStart.minute + 60) % 1440;
     const end = field("End time (24-hour HH:MM)", "time", layout, clockMinute(defaultEnd));
-    start.step = end.step = "60";
 
     const nextLabel = node("label", "Ends next day", inputFields);
     const next = node("input", "", nextLabel);

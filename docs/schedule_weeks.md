@@ -228,3 +228,9 @@ saved role is inactive. Saving an edit requires an active role.
 Uncertain requests and stale revisions require a refresh before retrying.
 Refreshing closes the form so stale saved values cannot be reused.
 The planner retains page scrolling and job/finish-time sorting.
+
+Shift start and end controls now use 24-hour dropdowns with 96 quarter-hour
+choices, from 00:00 through 23:45. Midnight finishes use 00:00 together
+with Ends next day. Existing off-grid times are not silently rounded:
+editing displays a placeholder requiring a quarter-hour selection before
+saving. Cancel and deletion remain available without changing those times.
