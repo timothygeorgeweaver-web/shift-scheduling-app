@@ -92,3 +92,23 @@ The approved V1 plan version 1.3 governs the next implementation:
 
 The existing form-based editor remains in code pending replacement.
 The new planner and date-based persistence are not implemented by this reset.
+
+## Automatic shift meal estimate approved October 24, 2026
+
+The owner does not want scheduled lunch times. Managers determine when
+employees take lunch during operations.
+
+For scheduling estimates:
+- A shift lasting six elapsed hours or less receives no deduction.
+- A shift lasting more than six elapsed hours receives one 30-minute deduction.
+- The deduction is per shift and is not repeated automatically for long shifts.
+- Duration uses actual elapsed time between timezone-aware shift endpoints.
+- No fictional lunch start/end interval is created.
+- Overlap, availability and rest checks retain the full shift endpoints.
+- This estimate does not record an actual meal or determine payroll deductions.
+
+This replaces earlier requirements for manual scheduled unpaid-break fields
+and subtraction of explicitly entered break intervals.
+
+Allocation of an untimed deduction across local dates for the daily-hours
+eligibility rule remains to be specified before that Stage 4 rule is finalized.

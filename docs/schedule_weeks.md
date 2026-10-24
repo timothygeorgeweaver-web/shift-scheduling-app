@@ -79,3 +79,19 @@ persistence and clearing of the waiting cursor. The month heading and
 previous/next controls now sit directly above the creation calendar.
 Buttons explicitly say Previous month and Next month; each moves one month.
 Revised JavaScript passed assistant-side syntax checking.
+
+## Shift timing foundation and revised meal estimate
+
+app/shift_timing.py resolves local shift endpoints to UTC, rejects ambiguous
+or nonexistent endpoints, and calculates actual elapsed duration.
+
+It returns full duration, an automatic meal estimate of 30 minutes only when
+duration exceeds 360 minutes, and estimated working minutes. Shift endpoints
+are preserved. Overnight shifts require explicit next-day selection; 24:00
+can represent same-day midnight. No manual lunch fields are planned.
+
+Tests cover the six-hour boundary, overnight shifts, DST elapsed duration,
+ambiguous/nonexistent local endpoints, and unchanged actual endpoints.
+
+This module is not yet connected to shift storage or browser controls.
+Shift-slot persistence and editing are the next Stage 3 slice.
