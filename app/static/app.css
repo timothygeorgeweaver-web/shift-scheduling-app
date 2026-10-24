@@ -362,3 +362,24 @@ main { padding-left: 12px; padding-right: 12px; min-width: 0; }
 }
 .schedule-start-card strong { line-height: 1.35; }
 .schedule-grid-heading { top: 0; }
+
+button.schedule-start-card {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  cursor: pointer;
+  border-top: 1px solid #c5d3e6;
+  border-right: 1px solid #c5d3e6;
+  border-bottom: 1px solid #c5d3e6;
+}
+button.schedule-start-card:hover { background: #d4e3f8; }
+button.schedule-start-card:focus-visible {
+  outline: 3px solid #3564a0;
+  outline-offset: 1px;
+}
+.shift-editor .shift-delete {
+  color: #9c2d28;
+  border-color: #d9a4a0;
+  margin-left: 12px;
+}

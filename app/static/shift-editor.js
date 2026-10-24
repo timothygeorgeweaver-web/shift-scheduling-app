@@ -1,5 +1,5 @@
 import {node, action, addDays, weekday} from "/static/planner-grid.js?v=2";
-import {createScheduleGrid, clockMinute} from "/static/schedule-grid.js?v=2";
+import {createScheduleGrid, clockMinute} from "/static/schedule-grid.js?v=3";
 
 export function createShiftEditor({api, expired, identity, parent, onOpen}) {
   const root = node("section", "", parent);
@@ -88,8 +88,7 @@ export function createShiftEditor({api, expired, identity, parent, onOpen}) {
         root.setAttribute("aria-busy", "false");
         controls.disabled = false;
         if (inputFields) {
-          inputFields.disabled = needsRefresh || data?.week.state !== "draft" ||
-            !roles.some(role => role.active);
+          inputFields.disabled = needsRefresh || data?.week.state !== "draft";
         }
       }
     }
@@ -105,6 +104,7 @@ export function createShiftEditor({api, expired, identity, parent, onOpen}) {
     data = week;
     roles = roleList;
     needsRefresh = false;
+    selectedStart = null;
     dirty = false;
     render();
     status.textContent = "Schedule loaded.";
@@ -128,6 +128,22 @@ export function createShiftEditor({api, expired, identity, parent, onOpen}) {
     return input;
   }
 
+  function chooseExisting(shift) {
+    if (busy || needsRefresh || !canClose()) return;
+    selectedStart = {
+      day: shift.local_start.slice(0, 10),
+      minute: Number(shift.local_start.slice(11, 13)) * 60 +
+        Number(shift.local_start.slice(14, 16)),
+      shift
+    };
+    dirty = false;
+    render();
+    status.textContent = "Editing saved shift.";
+    const form = content.querySelector("form");
+    form?.scrollIntoView({block: "nearest", behavior: "smooth"});
+    form?.querySelector("select")?.focus();
+  }
+
   function render() {
     content.replaceChildren();
     inputFields = null;
@@ -149,19 +165,25 @@ export function createShiftEditor({api, expired, identity, parent, onOpen}) {
       const form = content.querySelector("form");
       form?.scrollIntoView({block: "nearest", behavior: "smooth"});
       form?.querySelector("select")?.focus();
-    }, plannerScroll);
+    }, plannerScroll, chooseExisting);
 
     if (week.state !== "draft") return;
     if (!selectedStart) {
       node("p", "Choose + Add shift in a 15-minute cell to create a shift.", content);
       return;
     }
+    const editing = selectedStart.shift ?? null;
     const form = node("form", "", content);
     content.insertBefore(form, content.querySelector(".schedule-grid-scroll"));
     inputFields = node("fieldset", "", form);
-    node("legend", "Add shift", inputFields);
+    node("legend", editing ? "Edit shift" : "Add shift", inputFields);
+    if (editing) {
+      node("p", `Saved shift: ${editing.role_name}, ` +
+        `${editing.local_start.slice(0, 16).replace("T", " ")} to ` +
+        `${editing.local_end.slice(0, 16).replace("T", " ")}.`, inputFields);
+    }
     const activeRoles = roles.filter(role => role.active);
-    if (!activeRoles.length) {
+    if (!activeRoles.length && !editing) {
       node("p", "Add an active job role in Team management before creating shifts.", inputFields);
       inputFields.disabled = true;
       return;
@@ -175,6 +197,15 @@ export function createShiftEditor({api, expired, identity, parent, onOpen}) {
     for (const role of activeRoles) {
       node("option", role.name, roleSelect).value = role.id;
     }
+    if (editing) {
+      if (!activeRoles.some(role => role.id === editing.role_id)) {
+        const inactive = node("option",
+          editing.role_name + " (inactive — choose an active role to save)", roleSelect);
+        inactive.value = editing.role_id;
+        inactive.disabled = true;
+      }
+      roleSelect.value = editing.role_id;
+    }
 
     const dayLabel = node("label", "Start date", layout);
     const daySelect = node("select", "", dayLabel);
@@ -185,21 +216,28 @@ export function createShiftEditor({api, expired, identity, parent, onOpen}) {
     }
     daySelect.value = selectedStart.day;
     const start = field("Start time (24-hour HH:MM)", "time", layout, clockMinute(selectedStart.minute));
-    const defaultEnd = (selectedStart.minute + 60) % 1440;
+    const defaultEnd = editing
+      ? Number(editing.local_end.slice(11, 13)) * 60 +
+        Number(editing.local_end.slice(14, 16))
+      : (selectedStart.minute + 60) % 1440;
     const end = field("End time (24-hour HH:MM)", "time", layout, clockMinute(defaultEnd));
     start.step = end.step = "60";
 
     const nextLabel = node("label", "Ends next day", inputFields);
     const next = node("input", "", nextLabel);
     next.type = "checkbox";
-    next.checked = selectedStart.minute + 60 >= 1440;
+    next.checked = editing
+      ? editing.local_end.slice(0, 10) !== editing.local_start.slice(0, 10)
+      : selectedStart.minute + 60 >= 1440;
     node("p", "For a midnight finish, choose 00:00 and select Ends next day.", inputFields);
     const noteLabel = node("label", "Shift note (optional)", inputFields);
     const note = node("textarea", "", noteLabel);
     note.maxLength = 500;
     note.rows = 2;
+    note.value = editing?.note ?? "";
 
-    const save = node("button", "Add shift", inputFields);
+    const save = node("button", editing ? "Save changes" : "Add shift", inputFields);
+    save.disabled = !activeRoles.length;
     save.type = "submit";
     save.className = "button secondary";
     action("Cancel", inputFields, () => {
@@ -209,6 +247,41 @@ export function createShiftEditor({api, expired, identity, parent, onOpen}) {
       render();
       status.textContent = "Shift entry cancelled.";
     });
+    if (editing) {
+      const remove = action("Delete shift", inputFields, () => {
+        if (busy || needsRefresh) return;
+        const description = `${editing.role_name}, ` +
+          `${editing.local_start.slice(0, 16).replace("T", " ")} to ` +
+          `${editing.local_end.slice(0, 16).replace("T", " ")}`;
+        if (!window.confirm(
+          `Delete this saved shift?\n${description}\n` +
+          (dirty ? "Your unsaved changes will also be discarded." : "")
+        )) return;
+        task(async current => {
+          const result = await request(
+            endpoint() + "/shifts/" + encodeURIComponent(editing.id) + "/remove",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "X-CSRF-Token": identity.csrf_token
+              },
+              body: JSON.stringify({
+                expected_week_revision: data.week.revision,
+                expected_shift_revision: editing.revision
+              })
+            }, current
+          );
+          if (current !== generation) return;
+          data = result;
+          selectedStart = null;
+          dirty = false;
+          render();
+          status.textContent = "Shift deleted from the planner.";
+        });
+      });
+      remove.classList.add("shift-delete");
+    }
     form.addEventListener("input", () => {
       dirty = true;
       status.textContent = "Unsaved shift.";
@@ -217,6 +290,10 @@ export function createShiftEditor({api, expired, identity, parent, onOpen}) {
     form.addEventListener("submit", event => {
       event.preventDefault();
       if (busy || needsRefresh || !form.reportValidity()) return;
+      if (!activeRoles.some(role => role.id === roleSelect.value)) {
+        status.textContent = "Choose an active job role before saving.";
+        return;
+      }
       const minute = value => Number(value.slice(0, 2)) * 60 + Number(value.slice(3));
       const startMinute = minute(start.value), endMinute = minute(end.value);
       if (!next.checked && endMinute <= startMinute) {
@@ -232,9 +309,12 @@ export function createShiftEditor({api, expired, identity, parent, onOpen}) {
         expected_week_revision: data.week.revision,
         note: note.value
       };
+      if (editing) body.expected_shift_revision = editing.revision;
       task(async current => {
-        const result = await request(endpoint() + "/shifts", {
-          method: "POST",
+        const path = endpoint() + "/shifts" +
+          (editing ? "/" + encodeURIComponent(editing.id) : "");
+        const result = await request(path, {
+          method: editing ? "PATCH" : "POST",
           headers: {
             "Content-Type": "application/json",
             "X-CSRF-Token": identity.csrf_token
@@ -246,7 +326,7 @@ export function createShiftEditor({api, expired, identity, parent, onOpen}) {
         selectedStart = null;
         dirty = false;
         render();
-        status.textContent = "Shift added. The week overview shows its estimated working hours.";
+        status.textContent = editing ? "Shift changes saved." : "Shift added.";
       });
     });
   }

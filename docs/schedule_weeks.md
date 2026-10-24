@@ -214,3 +214,17 @@ Disposable PostgreSQL checks cover persistence, recalculated meal estimates,
 overnight edits, concurrent/stale edits, access isolation, removal history
 and full rollback on an audit failure. Browser edit/remove controls remain
 the next implementation step.
+
+## Browser shift editing and deletion
+
+Draft shift cards are keyboard-accessible buttons displaying only the job
+role. Opening a card fills the date, exact 24-hour times, next-day flag,
+role and note from the saved shift. Save changes uses PATCH and both saved
+revisions; Cancel preserves the saved shift.
+
+Delete shift asks for confirmation identifying the saved role and times,
+then calls the audited removal endpoint. It remains available when the
+saved role is inactive. Saving an edit requires an active role.
+Uncertain requests and stale revisions require a refresh before retrying.
+Refreshing closes the form so stale saved values cannot be reused.
+The planner retains page scrolling and job/finish-time sorting.

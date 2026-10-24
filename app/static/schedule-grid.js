@@ -22,7 +22,7 @@ export function compareShifts(a, b, roles) {
   return String(a.id).localeCompare(String(b.id));
 }
 
-export function createScheduleGrid(parent, data, roles, choose, scrollTop = 1408) {
+export function createScheduleGrid(parent, data, roles, choose, scrollTop = 1408, openShift = () => {}) {
   const roleMap = new Map(roles.map(role => [role.id, role]));
   const grouped = new Map();
 
@@ -62,9 +62,17 @@ export function createScheduleGrid(parent, data, roles, choose, scrollTop = 1408
       const box = node("div", "", grid);
       box.className = "schedule-start-cell";
       for (const shift of grouped.get(`${day}/${cell}`) ?? []) {
-        const card = node("article", "", box);
+        const editable = data.week.state === "draft";
+        const card = node(editable ? "button" : "article", "", box);
         card.className = "schedule-start-card";
         node("strong", shift.role_name, card);
+        if (editable) {
+          card.type = "button";
+          card.setAttribute("aria-label",
+            `Edit ${shift.role_name}, ${shift.local_start.slice(0, 10)}, ` +
+            `${shift.local_start.slice(11, 16)} to ${shift.local_end.slice(0, 16)}`);
+          card.addEventListener("click", () => openShift(shift));
+        }
 
       }
       if (data.week.state === "draft") {
