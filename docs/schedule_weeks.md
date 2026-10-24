@@ -447,3 +447,20 @@ Whole-pattern creation/replacement and before/after audit writes commit
 atomically. Stale or concurrent edits cannot overwrite one another.
 The existing Save as template, Apply template and Archive remain compatible.
 Direct planner browser controls are the next step.
+
+## Direct generic-week template planner
+
+Create New Template opens a blank Monday–Sunday planner. Edit Template
+loads the saved generic pattern. The planner shares the 15-minute grid,
+job-type ordering and role-only cards with the schedule builder, while
+hiding all calendar dates and month navigation.
+
+Floating shift controls support quarter-hour start/end choices, weekday,
+next-day endings, notes, local editing and local deletion. Changes remain
+in the template draft until Save template commits the complete pattern.
+Closing a changed draft requires confirmation. Saving does not create an
+intermediate schedule week and does not change previously generated weeks.
+
+Save as template from a scheduled week remains available. Archive template
+is a separate confirmed action. The previous replace-from-week management
+window is no longer connected to the browser workflow.

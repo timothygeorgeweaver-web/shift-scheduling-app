@@ -1,7 +1,7 @@
 import {node, action, addDays, weekday} from "/static/planner-grid.js?v=2";
-import {createShiftEditor} from "/static/shift-editor.js?v=8";
+import {createShiftEditor} from "/static/shift-editor.js?v=9";
 import {askTemplateName} from "/static/template-name-dialog.js?v=1";
-import {askTemplateChange} from "/static/template-manage-dialog.js?v=1";
+import {createTemplateEditor} from "/static/template-editor.js?v=1";
 
 export function createScheduleManager({api, expired}) {
   let root = null, epoch = 0, closeShifts = () => {};
@@ -70,19 +70,30 @@ export function createScheduleManager({api, expired}) {
     let month = new Date().toISOString().slice(0, 7);
     let state = null, selected = "", busy = false, ready = false;
     let copySource = null;
+    function lockOuter(open) {
+      if (!active()) return;
+      controls.disabled = open || busy;
+      fields.disabled = open || busy || !ready;
+      [...list.querySelectorAll("button"),
+       ...templatesView.querySelectorAll("button")].forEach(button => {
+        button.disabled = open || busy;
+      });
+    }
     const shifts = createShiftEditor({
-      api, expired, identity, parent: panel,
-      onOpen(open) {
-        if (!active()) return;
-        controls.disabled = open || busy;
-        fields.disabled = open || busy || !ready;
-        [...list.querySelectorAll("button"),
-         ...templatesView.querySelectorAll("button")].forEach(button => {
-          button.disabled = open || busy;
-        });
-      }
+      api, expired, identity, parent: panel, onOpen: lockOuter
     });
-    closeShifts = () => shifts.destroy();
+    const templateEditor = createTemplateEditor({
+      api, expired, identity, parent: panel, onOpen: lockOuter,
+      onSaved: () => task(async () => {
+        copySource = null;
+        await load();
+        say("Template saved.");
+      })
+    });
+    closeShifts = () => {
+      shifts.destroy();
+      templateEditor.destroy();
+    };
     const say = text => { if (active()) status.textContent = text; };
     const url = () => "/api/v1/staff/locations/" +
       encodeURIComponent(select.value) + "/schedule-weeks";
@@ -110,6 +121,7 @@ export function createScheduleManager({api, expired}) {
     function renderTemplates(templates) {
       templatesView.replaceChildren();
       node("h3", "Schedule templates", templatesView);
+      action("Create New Template", templatesView, () => editTemplate());
       if (!templates.length) {
         node("p", "No templates yet. Use Save as template beside an existing week.",
           templatesView);
@@ -120,7 +132,8 @@ export function createScheduleManager({api, expired}) {
         const item = node("li", "", entries);
         node("strong", template.name, item);
         node("span", ` · ${template.shift_count} shifts`, item);
-        action("Manage template", item, () => manageTemplate(template));
+        action("Edit Template", item, () => editTemplate(template));
+        action("Archive template", item, () => archiveTemplate(template));
         action("Use template", item, () => {
           if (busy || !ready) return;
           copySource = {...template, kind: "template"};
@@ -132,40 +145,38 @@ export function createScheduleManager({api, expired}) {
       }
     }
 
-    async function manageTemplate(template) {
+    function editTemplate(template = null) {
       if (busy || !ready) return;
-      const {first, last} = boundaries();
-      const weeks = state.weeks.filter(week =>
-        week.week_start_date <= last && addDays(week.week_start_date, 6) >= first
-      );
-      const change = await askTemplateChange(panel, template, weeks);
-      if (change === null || !active()) return;
+      copySource = null;
+      updateCopyMode();
+      shifts.reset();
+      templateEditor.open({
+        locationId: select.value,
+        locationRevision: state.location.revision,
+        templateId: template?.id ?? null
+      });
+    }
+
+    function archiveTemplate(template) {
+      if (busy || !ready || !window.confirm(
+        `Archive "${template.name}"? Existing schedule weeks stay unchanged.`
+      )) return;
       task(async () => {
-        try {
-          await request(templateUrl() + "/" + encodeURIComponent(template.id), {
-            method: "PATCH",
-            headers: {
-              "Content-Type": "application/json",
-              "X-CSRF-Token": identity.csrf_token
-            },
-            body: JSON.stringify({
-              ...change, expected_template_revision: template.revision
-            })
-          });
-          if (copySource?.kind === "template" && copySource.id === template.id) {
-            copySource = null;
-          }
-          await load();
-          say(change.active ? "Template changes saved." : "Template archived.");
-        } catch (error) {
-          if (error.status === 409) {
-            copySource = null;
-            await load();
-            say(error.message + " Refresh complete; reopen Manage template.");
-            return;
-          }
-          throw error;
-        }
+        await request(templateUrl() + "/" + encodeURIComponent(template.id), {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRF-Token": identity.csrf_token
+          },
+          body: JSON.stringify({
+            name: template.name,
+            active: false,
+            expected_template_revision: template.revision
+          })
+        });
+        copySource = null;
+        await load();
+        say("Template archived.");
       });
     }
 
@@ -351,6 +362,7 @@ export function createScheduleManager({api, expired}) {
 
     async function load() {
       shifts.reset();
+      templateEditor.reset();
       ready = false;
       selected = "";
       create.disabled = true;

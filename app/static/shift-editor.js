@@ -1,5 +1,5 @@
 import {node, action, addDays, weekday} from "/static/planner-grid.js?v=2";
-import {createScheduleGrid, clockMinute} from "/static/schedule-grid.js?v=4";
+import {createScheduleGrid, clockMinute} from "/static/schedule-grid.js?v=5";
 
 export function createShiftEditor({api, expired, identity, parent, onOpen}) {
   const root = node("section", "", parent);

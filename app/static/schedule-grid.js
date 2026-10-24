@@ -22,7 +22,7 @@ export function compareShifts(a, b, roles) {
   return String(a.id).localeCompare(String(b.id));
 }
 
-export function createScheduleGrid(parent, data, roles, choose, scrollTop = 1408, openShift = () => {}) {
+export function createScheduleGrid(parent, data, roles, choose, scrollTop = 1408, openShift = () => {}, {genericWeek = false} = {}) {
   const roleMap = new Map(roles.map(role => [role.id, role]));
   const grouped = new Map();
 
@@ -50,7 +50,7 @@ export function createScheduleGrid(parent, data, roles, choose, scrollTop = 1408
     const header = node("div", "", grid);
     header.className = "schedule-grid-heading";
     node("strong", names[weekday(day)], header);
-    node("span", day, header);
+    if (!genericWeek) node("span", day, header);
   }
 
   for (let cell = 0; cell < 96; cell++) {
@@ -69,8 +69,11 @@ export function createScheduleGrid(parent, data, roles, choose, scrollTop = 1408
         if (editable) {
           card.type = "button";
           card.setAttribute("aria-label",
-            `Edit ${shift.role_name}, ${shift.local_start.slice(0, 10)}, ` +
-            `${shift.local_start.slice(11, 16)} to ${shift.local_end.slice(0, 16)}`);
+            genericWeek
+              ? `Edit ${shift.role_name}, ${names[weekday(day)]}, ` +
+                `${shift.local_start.slice(11, 16)} to ${shift.local_end.slice(11, 16)}`
+              : `Edit ${shift.role_name}, ${shift.local_start.slice(0, 10)}, ` +
+                `${shift.local_start.slice(11, 16)} to ${shift.local_end.slice(0, 16)}`);
           card.addEventListener("click", () => openShift(shift, card));
         }
 
@@ -80,7 +83,8 @@ export function createScheduleGrid(parent, data, roles, choose, scrollTop = 1408
           choose(day, cell * 15, scroll.scrollTop, add);
         });
         add.className = "schedule-cell-add";
-        add.setAttribute("aria-label", `Add shift starting ${day} at ${time}`);
+        add.setAttribute("aria-label",
+          `Add shift starting ${genericWeek ? names[weekday(day)] : day} at ${time}`);
       }
     }
   }
