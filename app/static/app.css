@@ -262,3 +262,66 @@ footer { padding: 16px 24px 26px; text-align: center; font-size: 12px; color: va
 @media (max-width: 620px) {
   .shift-inputs { grid-template-columns: 1fr; gap: 0; }
 }
+
+.schedule-grid-scroll {
+  max-height: 65vh;
+  overflow: auto;
+  border: 1px solid #bcc8d4;
+  border-radius: 8px;
+}
+.schedule-time-grid {
+  display: grid;
+  grid-template-columns: 64px repeat(7, minmax(145px, 1fr));
+  min-width: 1080px;
+  align-items: stretch;
+}
+.schedule-grid-heading, .schedule-grid-corner {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #edf2f7;
+  padding: 8px;
+  border-bottom: 2px solid #bcc8d4;
+}
+.schedule-grid-heading span { display: block; font-size: .8rem; }
+.schedule-grid-corner { left: 0; z-index: 3; }
+.schedule-grid-time {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: #f2f5f8;
+  padding: 8px 4px;
+  border-bottom: 1px solid #dce3ea;
+  font-size: .8rem;
+}
+.schedule-start-cell {
+  min-height: 44px;
+  padding: 4px;
+  border-left: 1px solid #dce3ea;
+  border-bottom: 1px solid #dce3ea;
+}
+.schedule-start-card {
+  background: #e5edf9;
+  color: #18314f;
+  border-left: 3px solid #3564a0;
+  border-radius: 4px;
+  padding: 6px;
+  margin-bottom: 4px;
+  overflow-wrap: anywhere;
+}
+.schedule-start-card > * { display: block; }
+.schedule-cell-add {
+  display: block;
+  width: 100%;
+  min-height: 32px;
+  padding: 4px;
+  border: 1px dashed #93a5ba;
+  border-radius: 4px;
+  background: #fff;
+  color: #274d77;
+  cursor: pointer;
+  font: inherit;
+  font-size: .8rem;
+}
+.schedule-cell-add:hover { background: #edf4ff; }
+.schedule-cell-add:focus-visible { outline: 3px solid #3564a0; outline-offset: 1px; }

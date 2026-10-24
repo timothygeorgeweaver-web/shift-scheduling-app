@@ -164,3 +164,20 @@ Sign-out clears the editor, removes its unload handler and ignores late
 responses. This browser-only change uses regression and asset checks;
 existing PostgreSQL shift API certification remains applicable.
 Browser verification remains pending.
+
+## Fifteen-minute shift planner
+
+The draft overview uses seven date columns and 96 starting-time rows.
+Each starting cell contains compact shift cards and a separate Add shift
+space. Rows expand across all seven days to keep time labels aligned.
+Selecting Add shift fills the form's start date and time; saving keeps a
+blank Add shift space available for additional coverage at the same time.
+
+Cards group by job role and sort by actual ending instant within the role,
+with shift ID breaking exact ties. Alphabetical role order is the current
+fallback. Editable role display order remains pending.
+Existing shifts starting between quarter-hours remain visible in their
+containing quarter-hour cell, with their exact start time displayed.
+
+Shift editing/removal and navigation between open schedule weeks remain
+pending. This change does not alter stored shifts or meal calculations.

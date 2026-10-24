@@ -1,4 +1,5 @@
 import {node, action, addDays, weekday} from "/static/planner-grid.js?v=2";
+import {createScheduleGrid, clockMinute} from "/static/schedule-grid.js?v=1";
 
 export function createShiftEditor({api, expired, identity, parent, onOpen}) {
   const root = node("section", "", parent);
@@ -7,6 +8,7 @@ export function createShiftEditor({api, expired, identity, parent, onOpen}) {
   root.setAttribute("aria-label", "Schedule week");
   let generation = 0, busy = false, data = null, roles = [];
   let location = "", weekId = "", dirty = false, needsRefresh = false;
+  let selectedStart = null, plannerScroll = 1408;
   let status, content, controls, closeButton, refreshButton, inputFields;
 
   const names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
@@ -19,6 +21,8 @@ export function createShiftEditor({api, expired, identity, parent, onOpen}) {
     generation++;
     busy = false;
     data = null;
+    selectedStart = null;
+    plannerScroll = 1408;
     dirty = false;
     needsRefresh = false;
     root.replaceChildren();
@@ -126,34 +130,23 @@ export function createShiftEditor({api, expired, identity, parent, onOpen}) {
         (sum, slot) => sum + slot.estimated_work_minutes, 0
       ))} estimated coverage`, content);
 
-    const scroll = node("div", "", content);
-    scroll.className = "shift-week-scroll";
-    const grid = node("div", "", scroll);
-    grid.className = "shift-week-grid";
-
-    for (let offset = 0; offset < 7; offset++) {
-      const day = addDays(week.week_start_date, offset);
-      const column = node("section", "", grid);
-      node("h4", names[weekday(day)], column);
-      node("p", day, column);
-      const slots = data.slots.filter(slot => slot.local_start.slice(0, 10) === day);
-      if (!slots.length) node("p", "No shifts", column);
-      for (const slot of slots) {
-        const card = node("article", "", column);
-        card.className = "shift-card";
-        node("strong", slot.role_name, card);
-        const nextDay = slot.local_end.slice(0, 10) !== slot.local_start.slice(0, 10);
-        node("p", `${slot.local_start.slice(11, 16)}–${slot.local_end.slice(11, 16)}${nextDay ? " (+1 day)" : ""}`, card);
-        node("p", "Unassigned", card);
-        node("p", `Estimated work: ${hours(slot.estimated_work_minutes)}`, card);
-        if (slot.meal_estimate_minutes) {
-          node("small", "Includes a 30-minute meal estimate", card);
-        }
-        if (slot.note) node("p", slot.note, card);
-      }
-    }
+    createScheduleGrid(content, data, roles, (day, minute, position) => {
+      if (busy || needsRefresh || !canClose()) return;
+      plannerScroll = position;
+      selectedStart = {day, minute};
+      dirty = false;
+      render();
+      status.textContent = `New shift starting ${day} at ${clockMinute(minute)}.`;
+      const form = content.querySelector("form");
+      form?.scrollIntoView({block: "nearest", behavior: "smooth"});
+      form?.querySelector("select")?.focus();
+    }, plannerScroll);
 
     if (week.state !== "draft") return;
+    if (!selectedStart) {
+      node("p", "Choose + Add shift in a 15-minute cell to create a shift.", content);
+      return;
+    }
     const form = node("form", "", content);
     inputFields = node("fieldset", "", form);
     node("legend", "Add shift", inputFields);
@@ -180,13 +173,16 @@ export function createShiftEditor({api, expired, identity, parent, onOpen}) {
       const day = addDays(week.week_start_date, offset);
       node("option", `${names[weekday(day)]} ${day}`, daySelect).value = day;
     }
-    const start = field("Start time", "time", layout, "09:00");
-    const end = field("End time", "time", layout, "17:30");
+    daySelect.value = selectedStart.day;
+    const start = field("Start time", "time", layout, clockMinute(selectedStart.minute));
+    const defaultEnd = (selectedStart.minute + 60) % 1440;
+    const end = field("End time", "time", layout, clockMinute(defaultEnd));
     start.step = end.step = "60";
 
     const nextLabel = node("label", "Ends next day", inputFields);
     const next = node("input", "", nextLabel);
     next.type = "checkbox";
+    next.checked = selectedStart.minute + 60 >= 1440;
     node("p", "For a midnight finish, choose 00:00 and select Ends next day.", inputFields);
     const noteLabel = node("label", "Shift note (optional)", inputFields);
     const note = node("textarea", "", noteLabel);
@@ -196,6 +192,13 @@ export function createShiftEditor({api, expired, identity, parent, onOpen}) {
     const save = node("button", "Add shift", inputFields);
     save.type = "submit";
     save.className = "button secondary";
+    action("Cancel", inputFields, () => {
+      if (!canClose()) return;
+      selectedStart = null;
+      dirty = false;
+      render();
+      status.textContent = "Shift entry cancelled.";
+    });
     form.addEventListener("input", () => {
       dirty = true;
       status.textContent = "Unsaved shift.";
@@ -230,6 +233,7 @@ export function createShiftEditor({api, expired, identity, parent, onOpen}) {
         }, current);
         if (current !== generation) return;
         data = result;
+        selectedStart = null;
         dirty = false;
         render();
         status.textContent = "Shift added. The week overview shows its estimated working hours.";
