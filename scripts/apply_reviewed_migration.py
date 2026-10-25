@@ -52,7 +52,8 @@ def install(version, database, rehearse=False):
         "0047_schedule_publications",
         "0048_publication_review_scope",
         "0049_publication_cell_locks",
-        "0050_publication_availability_snapshots"
+        "0050_publication_availability_snapshots",
+        "0051_commit_schedule_publication"
     ), "Unsupported migration.")
     require(
         database == "shift_scheduling"
@@ -138,6 +139,7 @@ def install(version, database, rehearse=False):
         "0048_publication_review_scope": (set(), []),
         "0049_publication_cell_locks": (set(), []),
         "0050_publication_availability_snapshots": (set(), []),
+        "0051_commit_schedule_publication": (set(), []),
         "0032_assignment_rest_policy": ({"location"}, [
             "rest_window_start_minute", "rest_window_end_minute",
             "minimum_rest_minutes",
@@ -236,6 +238,8 @@ def install(version, database, rehearse=False):
         require(actual == expected, "Existing records changed during migration.")
 
     signature = {
+        "0051_commit_schedule_publication":
+            "scheduling.commit_schedule_publication(uuid,uuid,integer,integer,integer,boolean,boolean,text,jsonb)",
         "0050_publication_availability_snapshots":
             "scheduling.read_schedule_publication_history(uuid)",
         "0049_publication_cell_locks":

@@ -150,3 +150,29 @@ Recovery inventory: 23 tables and 50 reviewed migrations.
 
 The next step is the protected publication writer, combining fresh review,
 explicit confirmations, immutable roster/snapshot creation and final audit.
+
+## Atomic publication and staged amendments
+
+Added an explicitly confirmed, CSRF-protected staff publication endpoint.
+The trusted server locks fresh whole-week inputs, validates all assignments,
+checks current approvals and DST boundaries, and builds the safe roster.
+
+The database bridge rechecks the input fingerprint and publication number,
+then inserts the immutable version, automatic private availability evidence
+and final audit event in one transaction. Failures leave no publication,
+snapshots or new publication locks. Unfilled coverage requires its own
+confirmation. Client-supplied decisions and fingerprints are forbidden.
+
+Publication is a separate immutable layer over the editable working week.
+Working edits stage amendments without changing official versions.
+Republishing creates the next sequential version and retains prior snapshots.
+Published weeks cannot be deleted; a failed removal also rolls back any
+preceding shift/assignment retirement in that transaction.
+
+Focused certification covers confirmations, CSRF/origin, stale requests,
+decision injection, final audit rollback, snapshots, amendment isolation,
+republication, preserved history and employee-only denial.
+
+No real week is published by installation. Employee roster delivery and
+browser publication controls remain pending.
+Recovery inventory: 23 tables and 51 reviewed migrations.
