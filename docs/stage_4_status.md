@@ -396,3 +396,26 @@ under their applicable policies before committing.
 
 No candidate endpoint or assignment write is enabled by this block.
 Assignment persistence, override records, policy controls and UI remain pending.
+
+## Assignment storage foundation
+
+Added private assignment storage with one active assignee per shift and
+tenant-scoped employee/shift foreign keys. Retired assignment records remain
+available for history.
+
+Separate immutable approval records identify the assignment revision,
+employee, violated soft rule, reason, approving actor, policy snapshot and
+rule details. Only unavailability and daily-hours warnings can be recorded
+as overrides; hard rules cannot be approved through this table.
+
+The application has no direct read or write privileges on either new table.
+No assignment mutation endpoint or browser assignment control is enabled.
+Fresh candidate retrieval, protected commit-time eligibility checks,
+assignment audit writes, and integration with shift edits, removals and
+template replacement remain pending before assignment writes are enabled.
+
+Focused disposable-database checks cover active-assignee uniqueness,
+replacement history, immutable approvals, invalid override rejection,
+scoped foreign keys, runtime access denial and fixture rollback.
+The source migration creates two empty tables and changes no saved shifts.
+Recovery inventory now includes twenty tables and thirty migrations.

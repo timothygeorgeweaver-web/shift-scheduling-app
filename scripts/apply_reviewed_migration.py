@@ -31,7 +31,8 @@ def install(version, database, rehearse=False):
         "0026_remove_draft_schedule_weeks",
         "0027_template_destination_scope",
         "0028_employee_rollover_profile",
-        "0029_business_day_dst_guards"
+        "0029_business_day_dst_guards",
+        "0030_assignment_storage"
     ), "Unsupported migration.")
     require(
         database == "shift_scheduling"
@@ -97,6 +98,7 @@ def install(version, database, rehearse=False):
         "0027_template_destination_scope": (set(), []),
         "0028_employee_rollover_profile": (set(), []),
         "0029_business_day_dst_guards": (set(), []),
+        "0030_assignment_storage": (set(), []),
         "0022_business_day_storage": (
             {"location", "schedule_week", "schedule_template"},
             ["business_day_start_minute"],
@@ -152,6 +154,12 @@ def install(version, database, rehearse=False):
                 "Unexpected template tables.")
         require(after["data"]["schedule_template"]["rows"] == 0,
                 "Migration seeded real templates.")
+    if version == "0030_assignment_storage":
+        names = {"shift_assignment", "assignment_override"}
+        require(set(after["data"])-set(before["data"]) == names,
+                "Unexpected assignment tables.")
+        require(all(after["data"][name]["rows"] == 0 for name in names),
+                "Migration seeded employee assignments.")
     for table, value in before["data"].items():
         if table not in stripped | {"schema_migration"}:
             require(after["data"][table] == value,
@@ -212,6 +220,8 @@ def install(version, database, rehearse=False):
             "scheduling.my_unavailability_profiles()",
         "0029_business_day_dst_guards":
             "scheduling.create_blank_schedule_week(uuid,date,integer)",
+        "0030_assignment_storage":
+            "scheduling.lock_template_destination(uuid,uuid,integer,integer)",
     }[version]
     require(admin(f"""
         SELECT p.prosecdef
