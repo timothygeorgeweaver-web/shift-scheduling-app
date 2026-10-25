@@ -91,3 +91,6 @@ def ready() -> dict[str, str]:
             status_code=503, detail="Database is unavailable."
         ) from None
     return {"status": "ready", "database": "ok"}
+
+from app.assigned_shift_routes import router as assigned_shift_router
+app.include_router(assigned_shift_router)
