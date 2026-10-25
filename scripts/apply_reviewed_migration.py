@@ -35,7 +35,8 @@ def install(version, database, rehearse=False):
         "0030_assignment_storage",
         "0031_assignment_candidate_inputs",
         "0032_assignment_rest_policy",
-        "0033_edit_rest_policy"
+        "0033_edit_rest_policy",
+        "0034_assignment_transaction_scope"
     ), "Unsupported migration.")
     require(
         database == "shift_scheduling"
@@ -104,6 +105,7 @@ def install(version, database, rehearse=False):
         "0030_assignment_storage": (set(), []),
         "0031_assignment_candidate_inputs": (set(), []),
         "0033_edit_rest_policy": (set(), []),
+        "0034_assignment_transaction_scope": (set(), []),
         "0032_assignment_rest_policy": ({"location"}, [
             "rest_window_start_minute", "rest_window_end_minute",
             "minimum_rest_minutes",
@@ -183,6 +185,8 @@ def install(version, database, rehearse=False):
         require(actual == expected, "Existing records changed during migration.")
 
     signature = {
+        "0034_assignment_transaction_scope":
+            "scheduling.lock_assignment_scope(uuid,uuid,integer,integer,integer)",
         "0033_edit_rest_policy":
             "scheduling.edit_rest_policy(uuid,integer,integer,integer,integer)",
         "0032_assignment_rest_policy":

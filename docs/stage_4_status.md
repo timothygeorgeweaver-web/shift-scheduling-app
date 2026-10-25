@@ -536,3 +536,23 @@ failure rollback. No source rest-policy values are changed by certification.
 Administrator browser controls, affected-assignment review, mixed-policy
 reconciliation and protected assignment commits remain pending.
 Recovery inventory includes twenty tables and thirty-three migrations.
+
+## Assignment transaction locking
+
+Added an authorized assignment scope that locks the organization, location,
+week, shift, employee, role and live actor authorization records before
+re-reading current inputs and checking expected week, shift and policy
+revisions. Locks remain held until the caller's transaction finishes.
+
+This scope is intended for read-committed assignment mutation transactions.
+Candidate browsing continues to use read-only repeatable-read snapshots.
+The scope performs no assignment writes and does not authorize a save
+without fresh eligibility validation.
+
+Focused PostgreSQL checks use two independent runtime connections to prove
+serialization and lock release after rollback. Invalid sessions and stale
+policy revisions are rejected. No assignments or audit events are created.
+
+Protected assignment persistence, per-rule approvals, affected-assignment
+review and browser assignment controls remain pending.
+Recovery inventory includes twenty tables and thirty-four migrations.
