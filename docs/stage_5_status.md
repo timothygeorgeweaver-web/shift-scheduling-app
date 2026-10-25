@@ -44,3 +44,22 @@ it does not publish any real schedule.
 Publication validation/commit, availability locks, employee-safe roster reads
 and amendment integration remain pending.
 Recovery inventory: 22 tables and 47 reviewed migrations.
+
+## Fresh publication review and confirmation rules
+
+Added a pure whole-week review that requires fresh inputs for every assigned
+shift, independently of any stored clear/warning badge.
+
+Hard conflicts block publication. Each current soft warning requires a
+matching assignment-revision approval, nonblank reason, matching saved policy,
+and explicit evidence of no relevant dependency changes after approval.
+Daily-hours approval must also match the newly computed exact daily totals.
+Private reasons and raw availability are excluded from the review result.
+
+Publication requests require exact week, location and prior publication
+revisions. Publication confirmation is mandatory; Unfilled coverage requires
+a separate explicit confirmation.
+
+The future protected database reader must supply approval freshness evidence
+and complete assignment inputs under appropriate transaction locks. No HTTP
+publication endpoint or database publication writer is enabled by this step.
