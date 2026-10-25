@@ -515,3 +515,24 @@ employee-only denial, privacy projection, and absence of assignment writes.
 No browser assignment control or assignment mutation is enabled yet.
 Administrator rest-policy editing, mixed-policy reconciliation, protected
 assignment commits and affected-assignment review remain pending.
+
+## Administrator rest-policy API
+
+Added administrator-only rest-policy reads and CSRF-protected updates.
+Whole-quarter-hour inputs are validated in both HTTP and database layers.
+Updates serialize through the organization lock, check the shared location
+revision, and atomically record policy and audit changes. Unchanged requests
+do not create a new revision or audit event.
+
+During the assignment implementation transition, changed policy requests
+are denied if live assignments exist. This guard must be replaced by
+audited affected-assignment review before policy changes over existing
+assignments are enabled.
+
+Focused disposable HTTP checks cover validation, administrator versus
+scheduler access, stale and concurrent changes, no-op behavior and audit
+failure rollback. No source rest-policy values are changed by certification.
+
+Administrator browser controls, affected-assignment review, mixed-policy
+reconciliation and protected assignment commits remain pending.
+Recovery inventory includes twenty tables and thirty-three migrations.

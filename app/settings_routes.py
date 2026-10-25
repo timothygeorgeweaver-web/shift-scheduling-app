@@ -134,3 +134,60 @@ def edit_business_day_policy(
                     detail="Rollover settings changed or are invalid. Refresh and try again.",
                 ) from None
             raise
+
+
+class EditRestPolicy(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    expected_location_revision: StrictInt = Field(ge=1, le=2147483646)
+    window_start: StrictInt = Field(ge=0, le=1439)
+    window_end: StrictInt = Field(ge=0, le=1439)
+    rest_minutes: StrictInt = Field(ge=0, le=1440)
+
+    @field_validator("window_start", "window_end", "rest_minutes")
+    @classmethod
+    def quarter_hour(cls, value):
+        if value % 15:
+            raise ValueError("Choose a fifteen-minute increment.")
+        return value
+
+
+@router.get("/locations/{location_id}/rest-policy")
+def read_rest_policy(location_id: UUID, token: str = Depends(_token)):
+    with administrator_connection(token, location_id) as (conn, location, actor):
+        return conn.execute(
+            """
+            SELECT id AS location_id,revision AS location_revision,
+                   rest_window_start_minute AS window_start,
+                   rest_window_end_minute AS window_end,
+                   minimum_rest_minutes AS rest_minutes
+            FROM scheduling.location WHERE id=%s
+            """, (location_id,),
+        ).fetchone()
+
+
+@router.patch("/locations/{location_id}/rest-policy")
+def edit_rest_policy(
+    location_id: UUID, body: EditRestPolicy,
+    token: str = Depends(mutation_token),
+):
+    with administrator_connection(
+        token, location_id, write=True
+    ) as (conn, location, actor):
+        try:
+            return conn.execute(
+                "SELECT scheduling.edit_rest_policy(%s,%s,%s,%s,%s) AS policy",
+                (location_id, body.expected_location_revision,
+                 body.window_start, body.window_end, body.rest_minutes),
+            ).fetchone()["policy"]
+        except psycopg.Error as error:
+            statuses = {"40001": 409, "42501": 403, "22023": 422, "55000": 423}
+            if error.sqlstate in statuses:
+                detail = (
+                    "Existing assignments require review before changing rest policy."
+                    if error.sqlstate == "55000" else
+                    "Rest settings changed or are invalid. Refresh and check the details."
+                )
+                raise HTTPException(
+                    status_code=statuses[error.sqlstate], detail=detail,
+                ) from None
+            raise
