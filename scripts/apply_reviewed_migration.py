@@ -30,7 +30,8 @@ def install(version, database, rehearse=False):
         "0025_capture_business_day_policy",
         "0026_remove_draft_schedule_weeks",
         "0027_template_destination_scope",
-        "0028_employee_rollover_profile"
+        "0028_employee_rollover_profile",
+        "0029_business_day_dst_guards"
     ), "Unsupported migration.")
     require(
         database == "shift_scheduling"
@@ -95,6 +96,7 @@ def install(version, database, rehearse=False):
         "0026_remove_draft_schedule_weeks": ({"schedule_week"}, ["deleted_at"]),
         "0027_template_destination_scope": (set(), []),
         "0028_employee_rollover_profile": (set(), []),
+        "0029_business_day_dst_guards": (set(), []),
         "0022_business_day_storage": (
             {"location", "schedule_week", "schedule_template"},
             ["business_day_start_minute"],
@@ -208,6 +210,8 @@ def install(version, database, rehearse=False):
             "scheduling.lock_template_destination(uuid,uuid,integer,integer)",
         "0028_employee_rollover_profile":
             "scheduling.my_unavailability_profiles()",
+        "0029_business_day_dst_guards":
+            "scheduling.create_blank_schedule_week(uuid,date,integer)",
     }[version]
     require(admin(f"""
         SELECT p.prosecdef

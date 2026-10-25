@@ -32,7 +32,7 @@ def fail(error):
         "42501": (403, "Scheduler access is required."),
         "40001": (409, "A schedule exists or location settings changed. Refresh."),
         "23505": (409, "A schedule already exists for this week."),
-        "22023": (422, "Check the dates and configured week start."),
+        "22023": (422, "Check the week-start date and rollover. Rollover must occur exactly once on each date."),
     }
     if error.sqlstate in statuses:
         status, detail = statuses[error.sqlstate]

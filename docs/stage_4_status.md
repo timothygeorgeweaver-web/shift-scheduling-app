@@ -354,3 +354,23 @@ DST days and explicit rejection of ambiguous/nonexistent rollover boundaries.
 This is pure calculation only. It does not alter shifts, schedule lunch times,
 record meals or make payroll deductions. Eligibility aggregation and browser
 labor totals are not connected yet. Overlap/rest retain full shift endpoints.
+
+## Actual-date DST rollover safeguards
+
+Migration 0029 validates all live saved weeks without changing them, then
+requires eight unique, advancing rollover boundaries before creating a week.
+Blank creation, copying and template application share this guard.
+
+Employee business-week reads/saves and mass-edit ranges also validate their
+actual local business-day boundaries. Missing or repeated rollover instants
+are rejected explicitly. Configuration remains quarter-hour based; its
+suitability is checked against the actual dates and installed timezone rules.
+
+The unavailability UI now displays the server's validation explanation.
+
+Focused PostgreSQL checks cover missing spring and repeated fall rollover
+times, rejected copy/template/private-planner operations, unchanged audit
+state after rejection, and valid 05:00 weeks with 23/25 elapsed-hour shifts.
+Existing saved policies and shift endpoints remain unchanged.
+
+Employee eligibility and assignment persistence are next.

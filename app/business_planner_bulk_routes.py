@@ -12,7 +12,7 @@ from psycopg.types.json import Jsonb
 from pydantic import Field, StrictInt
 
 from app.auth_store import connection, identity
-from app.business_day import validate_rollover
+from app.business_day import business_day_bounds, validate_rollover
 from app.business_planner_routes import fail
 from app.planner_bulk_routes import BulkRequest, gate_state, lock_scope
 from app.planner_logic import normalize_cells
@@ -57,6 +57,11 @@ def read_selected(conn, location, additions):
 
 def build_preview(conn, location, body, digest, profile):
     rollover = validate_rollover(profile["business_day_start_minute"])
+    for offset in range((body.last_date-body.first_date).days+1):
+        business_day_bounds(
+            body.first_date+timedelta(days=offset),
+            profile["timezone"], rollover,
+        )
     additions = bulk_calendar_additions(
         body.first_date, body.last_date, body.weekly_cells,
         rollover_minute=rollover,

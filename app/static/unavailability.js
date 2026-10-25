@@ -87,11 +87,13 @@ export function createUnavailabilityManager({api, expired}) {
         throw new Error("Please sign in again.");
       }
       if (!response.ok) {
+        const failure = await response.json().catch(() => null);
         const error = new Error(
           response.status === 409 ? "Data or policy changed. Return to the main calendar and refresh before previewing again." :
           response.status === 423 ? "A date is now locked. Refresh the calendar." :
           response.status === 404 ? "No active employee profile is available for this workplace." :
-          response.status === 422 ? "Check your dates and selections. Use at most 366 dates per mass edit." :
+          response.status === 422 ? (typeof failure?.detail === "string" ? failure.detail :
+            "Check your dates and selections. Use at most 366 dates per mass edit.") :
           "The request was not confirmed. Refresh before trying again."
         );
         error.status = response.status;

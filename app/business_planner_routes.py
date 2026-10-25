@@ -10,7 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field, StrictInt, model_validator
 
 from app.auth_routes import _token
 from app.auth_store import connection, identity
-from app.business_day import validate_rollover
+from app.business_day import business_day_bounds, validate_rollover
 from app.planner_bulk_routes import lock_scope
 from app.planner_routes import DateChange, project_calendar
 from app.security import session_token_digest
@@ -68,6 +68,17 @@ def read_eight(conn, location, first):
         "SELECT scheduling.read_my_planner(%s,%s)",
         (location, first+timedelta(days=1)),
     ).fetchone()[0])
+    try:
+        for offset in range(7):
+            business_day_bounds(
+                first+timedelta(days=offset), left["profile"]["timezone"],
+                left["profile"]["business_day_start_minute"],
+            )
+    except ValueError:
+        raise HTTPException(
+            status_code=422,
+            detail="The rollover time is missing or repeated on a selected date. Ask an administrator to choose another rollover.",
+        ) from None
     rows = {row["date"]: row for row in left["days"]+right["days"]}
     return {
         "first_date": first.isoformat(),

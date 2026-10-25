@@ -33,7 +33,7 @@ def fail(error):
         "42501": (404, "Schedule was not found."),
         "40001": (409, "The schedule changed. Refresh before saving."),
         "55000": (423, "This schedule is not editable as a draft."),
-        "22023": (422, "Check the role, shift date and times."),
+        "22023": (422, "Check the role, shift dates, times and destination rollover."),
         "22007": (422, "Invalid shift date or time."),
         "22008": (422, "Invalid shift date or time."),
     }
