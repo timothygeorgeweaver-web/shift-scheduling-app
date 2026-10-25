@@ -218,3 +218,25 @@ polling. A publication event can refresh the matching employee view.
 Asset-serving checks passed. Browser acceptance will cover this screen together
 with the upcoming staff publication controls, which provide the end-to-end
 publication flow.
+
+## Staff publication browser controls
+
+Added Publish Review and Publication History beside selected-week actions.
+Review shows coverage, Unfilled slots, hard conflicts and current/missing
+warning approvals. Publication and Unfilled coverage require separate explicit
+confirmations. Saving performs the protected fresh server review again.
+
+Floating dialogs remain inside the viewport and clean up on account changes.
+Scheduling/template editors and policy saves are blocked while review/history
+is open. Failed publication requires reopening review rather than blind retry.
+
+Calendar metadata shows the latest published version and working revision
+changes. Published-week deletion is disabled. History displays immutable
+versions using the shared read-only roster renderer.
+
+Successful publication refreshes calendar status and the matching employee
+roster view in the same workspace. Other sessions refresh on their next read;
+there is no polling.
+
+Focused metadata and asset checks passed. End-to-end owner browser acceptance
+remains pending. Recovery inventory: 23 tables and 53 reviewed migrations.

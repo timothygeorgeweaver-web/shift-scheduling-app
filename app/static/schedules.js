@@ -1,4 +1,5 @@
 import {confirmAction} from "/static/confirm-dialog.js?v=1";
+import {reviewAndPublish, showPublicationHistory} from "/static/publication-controls.js?v=1";
 import {node, action, addDays, weekday} from "/static/planner-grid.js?v=2";
 import {createShiftEditor} from "/static/shift-editor.js?v=14";
 import {createAssignmentEditor} from "/static/assignment-editor.js?v=6";
@@ -66,6 +67,8 @@ export function createScheduleManager({api, expired, onEditorOpen = () => {}}) {
     const copy = action("Copy this week", buttons, copyWeek);
     const remove = action("Delete week", buttons, deleteWeek);
     const apply = action("Apply Template", buttons, applyTemplate);
+    const publish = action("Publish Review", buttons, publishWeek);
+    const history = action("Publication History", buttons, publicationHistory);
     const cancelCopy = action("Cancel copying", actions, () => {
       copySource = null;
       renderActions();
@@ -139,13 +142,19 @@ export function createScheduleManager({api, expired, onEditorOpen = () => {}}) {
     function renderActions() {
       const valid = validSelection(), week = selectedWeek();
       const draft = week?.state === "draft";
+      const published = week?.publication_number ?? 0;
+      const label = published
+        ? `Published version ${published}${week.has_unpublished_changes ? " · Unpublished working changes" : ""}`
+        : week ? week.state : "Not created yet";
       actionTitle.textContent = selected ? `Week of ${selected}` : "Week actions";
       selection.textContent = valid
-        ? `${selected} – ${addDays(selected, 6)} · ${week ? week.state : "Not created yet"}`
+        ? `${selected} – ${addDays(selected, 6)} · ${label}`
         : "Choose a week-start date above.";
       create.disabled = !valid || !!week;
       open.disabled = save.disabled = !valid || !week;
-      remove.disabled = !valid || !draft;
+      remove.disabled = !valid || !draft || published > 0;
+      publish.disabled = !valid || !draft;
+      history.disabled = !valid || !published;
       assign.disabled = clearAssignments.disabled = !valid || !draft;
       apply.disabled = !valid || (!!week && !draft) || !templates.length;
       copy.textContent = copySource ? "Copy week here" : "Copy this week";
@@ -257,10 +266,12 @@ export function createScheduleManager({api, expired, onEditorOpen = () => {}}) {
         const existing = correctDay ? covered(day) : null;
         const exact = existing?.week_start_date === day;
         button.disabled = !correctDay || day > "9998-12-25" || (!!existing && !exact);
-        const description = exact ? `${existing.state} week` : existing ? "Overlaps another schedule" :
+        const description = exact ? (existing.publication_number
+          ? `Published version ${existing.publication_number}` : `${existing.state} week`) : existing ? "Overlaps another schedule" :
           correctDay ? "Unused week" : `Weeks begin ${names[state.location.week_start_day]}`;
         if (existing) {
-          node("small", exact ? existing.state : "Covered", button);
+          node("small", exact ? (existing.publication_number
+            ? `Published v${existing.publication_number}` : existing.state) : "Covered", button);
           button.classList.add("week-picker-covered");
         }
         button.title = `${day}: ${description}`;
@@ -313,6 +324,48 @@ export function createScheduleManager({api, expired, onEditorOpen = () => {}}) {
       say("Select a week and choose an action.");
     }
 
+    async function publishWeek() {
+      const week = selectedWeek();
+      if (busy || editorOpen || !ready || week?.state !== "draft") return;
+      const locationId = select.value;
+      await task(async () => {
+        lockOuter(true);
+        try {
+          const result = await reviewAndPublish({
+            parent: panel, api, expired, identity,
+            locationId, locationRevision: state.location.revision,
+            week, signal: abort.signal, isActive: active, anchor: publish
+          });
+          if (!active()) return;
+          await load(week.week_start_date);
+          if (result) {
+            say(`Published version ${result.publication_number}.`);
+            window.dispatchEvent(new CustomEvent("schedule-published", {
+              detail: {locationId, weekId: week.id}
+            }));
+          } else {
+            say("Publication review closed. Calendar refreshed.");
+          }
+        } finally {
+          if (active()) lockOuter(false);
+        }
+      });
+    }
+    async function publicationHistory() {
+      const week = selectedWeek();
+      if (busy || editorOpen || !ready || !week?.publication_number) return;
+      await task(async () => {
+        lockOuter(true);
+        try {
+          await showPublicationHistory({
+            parent: panel, api, expired, locationId: select.value,
+            week, signal: abort.signal, isActive: active, anchor: history
+          });
+        } finally {
+          if (active()) lockOuter(false);
+        }
+      });
+    }
     function createBlank() {
       if (!validSelection() || selectedWeek() || busy) return;
       const day = selected;
@@ -389,7 +442,7 @@ export function createScheduleManager({api, expired, onEditorOpen = () => {}}) {
     }
     async function deleteWeek() {
       const week = selectedWeek();
-      if (busy || !ready || week?.state !== "draft") return;
+      if (busy || !ready || week?.state !== "draft" || week.publication_number) return;
       if (!await confirmAction(`Delete the whole draft week ${week.week_start_date} – ${addDays(week.week_start_date, 6)} and all its shifts?\nSaved templates stay unchanged. This date will become available for a fresh week.`)) return;
       task(async () => {
         await request(weeksUrl() + "/" + encodeURIComponent(week.id) + "/remove",

@@ -54,7 +54,8 @@ def install(version, database, rehearse=False):
         "0049_publication_cell_locks",
         "0050_publication_availability_snapshots",
         "0051_commit_schedule_publication",
-        "0052_published_roster_reads"
+        "0052_published_roster_reads",
+        "0053_schedule_publication_status"
     ), "Unsupported migration.")
     require(
         database == "shift_scheduling"
@@ -142,6 +143,7 @@ def install(version, database, rehearse=False):
         "0050_publication_availability_snapshots": (set(), []),
         "0051_commit_schedule_publication": (set(), []),
         "0052_published_roster_reads": (set(), []),
+        "0053_schedule_publication_status": (set(), []),
         "0032_assignment_rest_policy": ({"location"}, [
             "rest_window_start_minute", "rest_window_end_minute",
             "minimum_rest_minutes",
@@ -240,6 +242,8 @@ def install(version, database, rehearse=False):
         require(actual == expected, "Existing records changed during migration.")
 
     signature = {
+        "0053_schedule_publication_status":
+            "scheduling.list_schedule_weeks(uuid,date,date)",
         "0052_published_roster_reads":
             "scheduling.read_my_published_week(uuid,uuid)",
         "0051_commit_schedule_publication":
