@@ -25,12 +25,16 @@ The health endpoint checks application liveness, not database connectivity.
 
 ## Current scope
 
-The local application includes PostgreSQL, authentication, staff and role
-management, qualifications, employee account creation, and administrator access
-controls. Browser workflows have been manually verified.
+The application includes role-scoped administration, business-day
+unavailability, schedule weeks, templates and copying, shift assignment,
+policy validation, publication, immutable published revisions, and
+employee team-roster access.
 
-Scheduling and availability are not implemented yet. Persistent startup and
-hosted deployment remain pending. See stage_1_status.md for the current gaps.
+Stages 1 through 5 are complete. Stage 6 covers operational readiness,
+deployment and pilot acceptance. See stage_6_status.md for remaining gates.
+
+The manual command above starts a local development server. Persistent
+startup and hosted deployment are not established by that command.
 
 Run the database integration checks with the application stopped:
 
