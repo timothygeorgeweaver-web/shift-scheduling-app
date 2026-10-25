@@ -28,7 +28,8 @@ def install(version, database, rehearse=False):
         "0022_business_day_storage", "0023_business_day_policy",
         "0024_business_week_shift_boundaries",
         "0025_capture_business_day_policy",
-        "0026_remove_draft_schedule_weeks"
+        "0026_remove_draft_schedule_weeks",
+        "0027_template_destination_scope"
     ), "Unsupported migration.")
     require(
         database == "shift_scheduling"
@@ -91,6 +92,7 @@ def install(version, database, rehearse=False):
         "0024_business_week_shift_boundaries": (set(), []),
         "0025_capture_business_day_policy": (set(), []),
         "0026_remove_draft_schedule_weeks": ({"schedule_week"}, ["deleted_at"]),
+        "0027_template_destination_scope": (set(), []),
         "0022_business_day_storage": (
             {"location", "schedule_week", "schedule_template"},
             ["business_day_start_minute"],
@@ -200,6 +202,8 @@ def install(version, database, rehearse=False):
             "scheduling.save_template_pattern(uuid,uuid,integer,integer,text,jsonb)",
         "0026_remove_draft_schedule_weeks":
             "scheduling.remove_draft_schedule_week(uuid,uuid,integer)",
+        "0027_template_destination_scope":
+            "scheduling.lock_template_destination(uuid,uuid,integer,integer)",
     }[version]
     require(admin(f"""
         SELECT p.prosecdef

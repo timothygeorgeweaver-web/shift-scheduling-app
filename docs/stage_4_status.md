@@ -171,3 +171,20 @@ recreation without inherited shifts.
 The calendar/action-panel redesign and Append/Replace template application
 remain pending. The week-removal browser button is not connected yet.
 Month navigation width and Next Day line layout have been adjusted.
+
+## Atomic template Append/Replace API
+
+Template application now accepts mode append/replace and an optional exact
+destination week ID/revision. Without an existing destination it creates a
+new draft. With one, migration 0027 locks and authorizes the existing draft
+and verifies both week and location revisions before modifying shifts.
+
+Append preserves existing shifts. Replace retires active shifts and inserts
+the pattern using the destination's saved rollover. All removals, insertions
+and audit events share one transaction. Historical shift rows remain intact.
+
+Focused certification covers preservation, replacement, fresh destinations,
+business-day placement, CSRF, stale/concurrent requests, non-draft denial
+and complete rollback following a final audit failure.
+
+The combined selected-week browser controls and mode dialog remain pending.

@@ -1,10 +1,11 @@
 """Staff-only independent schedule-template snapshots."""
 
 from uuid import UUID
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException
 import psycopg
-from pydantic import BaseModel, ConfigDict, Field, StrictInt, field_validator
+from pydantic import BaseModel, ConfigDict, Field, StrictInt, field_validator, model_validator
 
 from app.auth_routes import _token
 from app.schedule_week_routes import authorized_location
@@ -101,6 +102,17 @@ class ApplyTemplate(BaseModel):
     week_start_date: date
     expected_template_revision: StrictInt = Field(ge=1, le=2147483647)
     expected_location_revision: StrictInt = Field(ge=1, le=2147483647)
+    mode: Literal["append", "replace"] = "append"
+    week_id: UUID | None = None
+    expected_week_revision: StrictInt | None = Field(
+        default=None, ge=1, le=2147483646,
+    )
+
+    @model_validator(mode="after")
+    def paired_destination(self):
+        if (self.week_id is None) != (self.expected_week_revision is None):
+            raise ValueError("Supply both destination week and revision.")
+        return self
 
 
 @router.post(
@@ -113,26 +125,70 @@ def apply_template(
 ):
     with staff_connection(token, write=True) as conn:
         try:
+            # Authorize before creating or locking any destination.
             read_template(conn, location_id, template_id)
-            destination = conn.execute(
-                "SELECT scheduling.create_blank_schedule_week(%s,%s,%s) AS result",
-                (location_id, body.week_start_date,
-                 body.expected_location_revision),
-            ).fetchone()["result"]
+            if body.week_id is None:
+                destination = conn.execute(
+                    "SELECT scheduling.create_blank_schedule_week(%s,%s,%s) AS result",
+                    (location_id, body.week_start_date,
+                     body.expected_location_revision),
+                ).fetchone()["result"]
+                current = {
+                    "week": destination,
+                    "slots": [],
+                }
+            else:
+                current = conn.execute(
+                    "SELECT scheduling.lock_template_destination(%s,%s,%s,%s) AS result",
+                    (location_id, body.week_id, body.expected_week_revision,
+                     body.expected_location_revision),
+                ).fetchone()["result"]
+                destination = current["week"]
+                if destination["week_start_date"] != body.week_start_date.isoformat():
+                    raise HTTPException(
+                        status_code=409,
+                        detail="The selected destination week changed. Refresh.",
+                    )
+
+            # Both paths now hold the organization's mutation lock.
             template = read_template(conn, location_id, template_id)
             if template["revision"] != body.expected_template_revision:
                 raise HTTPException(
                     status_code=409,
-                    detail="The template changed. Refresh before using it.",
+                    detail="The template changed. Refresh before applying it.",
                 )
             if template["week_start_day"] != destination["week_start_day"]:
                 raise HTTPException(
                     status_code=422,
-                    detail="The template and destination must use the same week-start day.",
+                    detail="Template and destination must use the same week-start day.",
                 )
+
+            previous_revision = destination["revision"]
+            removed_count = 0
+            if body.mode == "replace":
+                for slot in current["slots"]:
+                    result = conn.execute(
+                        "SELECT scheduling.change_draft_shift("
+                        "%s,%s,%s,%s,%s,%s,%s,%s,%s) AS result",
+                        (
+                            destination["id"], slot["id"], slot["revision"],
+                            True, None, destination["revision"], None, None, None,
+                        ),
+                    ).fetchone()["result"]
+                    destination = result["week"]
+                    removed_count += 1
+
+            source_pattern = {
+                **template["snapshot"],
+                "week": {
+                    **template["snapshot"]["week"],
+                    "business_day_start_minute":
+                        template["business_day_start_minute"],
+                },
+            }
             result = populate_draft(
-                conn, location_id, template["snapshot"],
-                destination, body.week_start_date,
+                conn, location_id, source_pattern, destination,
+                body.week_start_date,
             )
             _audit(
                 conn, _location(conn, location_id),
@@ -140,11 +196,15 @@ def apply_template(
                 {
                     "template_id": template["id"],
                     "template_revision": template["revision"],
+                    "destination_week_revision": previous_revision,
                 },
                 {
                     "destination_week_id": destination["id"],
                     "week_start_date": destination["week_start_date"],
-                    "created_shift_count": len(result["slots"]),
+                    "mode": body.mode,
+                    "removed_shift_count": removed_count,
+                    "created_shift_count": len(template["snapshot"]["slots"]),
+                    "resulting_week_revision": result["week"]["revision"],
                 },
             )
             return result
@@ -152,7 +212,7 @@ def apply_template(
             if error.sqlstate == "23505":
                 raise HTTPException(
                     status_code=409,
-                    detail="A schedule already covers the destination week.",
+                    detail="A schedule already covers the destination week. Refresh.",
                 ) from None
             fail(error)
 
