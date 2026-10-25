@@ -320,3 +320,19 @@ skips and final-audit failure rollback across multiple weeks.
 Both unavailability planners now use business-day layouts. Owner browser
 acceptance remains pending. DST boundary safeguards and business-day labor
 allocation remain separate remaining work.
+
+## Unavailability page scrolling and visibility toggles
+
+Owner browser acceptance passed for business-day main and mass-edit behavior.
+
+Both unavailability planners now scroll with the page rather than inside a
+height-limited grid. Each has a Hide planner/Show planner toggle above its grid.
+
+The toggle changes visibility only: it does not rebuild the grid, clear drafts,
+submit requests or discard previews. Main and mass-editor visibility preferences
+are separate within the current signed-in view. Save, date-range, preview and
+return controls remain outside the hidden grid.
+
+Local syntax and simulated interaction checks cover hiding/showing without
+requests or grid reconstruction, preservation of unsaved cells, accessible
+expanded state, and mass preview submission while hidden. Asset serving passes.

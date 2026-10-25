@@ -42,6 +42,7 @@ export function createUnavailabilityManager({api, expired}) {
     let mode = "main", grid = null, preview = null, previewPayload = null;
     let bulk = null;
     const scrollPositions = {main: 0, bulk: 0};
+    const hiddenPlanners = {main: false, bulk: false};
     const say = text => { if (alive()) status.textContent = text; };
     const profile = () => profiles.find(p => p.location_id === location);
     const endpoint = () => "/api/v1/me/business-planner/" + encodeURIComponent(location);
@@ -244,13 +245,35 @@ export function createUnavailabilityManager({api, expired}) {
         task(loadCalendar);
       });
 
-      grid = createPlannerGrid(view, days, (index, cells) => {
+      grid = createPlannerGrid(plannerArea(view), days, (index, cells) => {
         draft[data.days[index].date] = cells;
         save.disabled = refreshRequired || changedDates().length === 0;
         say("Unsaved changes.");
       }, scrollPositions.main, {rolloverMinute: data.profile.business_day_start_minute});
       grid.setEnabled(!refreshRequired);
       view.append(footer);
+    }
+
+    function plannerArea(parent) {
+      const plannerMode = mode;
+      const controls = node("div", "", parent);
+      controls.className = "planner-visibility";
+      const area = node("div", "", parent);
+      area.className = "unavailability-planner-area";
+      area.id = `unavailability-grid-${generation}-${plannerMode}`;
+      const toggle = action("", controls, () => {
+        if (busy) return;
+        hiddenPlanners[plannerMode] = !hiddenPlanners[plannerMode];
+        update();
+      });
+      toggle.setAttribute("aria-controls", area.id);
+      function update() {
+        area.hidden = hiddenPlanners[plannerMode];
+        toggle.textContent = area.hidden ? "Show planner" : "Hide planner";
+        toggle.setAttribute("aria-expanded", String(!area.hidden));
+      }
+      update();
+      return area;
     }
 
     function dateInput(text, parent, value) {
@@ -294,7 +317,7 @@ export function createUnavailabilityManager({api, expired}) {
           effective_cells: bulk.cells[String(weekday(day))]
         };
       });
-      grid = createPlannerGrid(view, days, (index, cells) => {
+      grid = createPlannerGrid(plannerArea(view), days, (index, cells) => {
         bulk.cells[String(weekday(days[index].date))] = cells;
         invalidate();
       }, scrollPositions.bulk, {genericWeek: true,

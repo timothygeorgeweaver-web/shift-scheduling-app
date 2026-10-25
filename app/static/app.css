@@ -541,3 +541,21 @@ dialog.shift-popup {
   font-size: 9px;
   line-height: 1.1;
 }
+
+.unavailability .planner-scroll {
+  min-width: 0;
+  max-height: none;
+  height: auto;
+  overflow: visible;
+  overscroll-behavior: auto;
+}
+.unavailability .planner-table {
+  width: 100%;
+  min-width: 0;
+}
+.unavailability .planner-table thead th {
+  overflow-wrap: anywhere;
+}
+.unavailability-planner-area { min-width: 0; }
+.unavailability-planner-area[hidden] { display: none; }
+.unavailability .planner-visibility { margin: 12px 0; }
