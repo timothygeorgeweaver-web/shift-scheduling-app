@@ -434,3 +434,25 @@ silently treated as available.
 
 This is a pure conversion helper. Fresh candidate database reads and
 protected assignment mutations remain pending. No database writes occur.
+
+## Authorized assignment inputs
+
+Added an internal staff-authorized database reader for one draft shift and
+one same-location employee. Each call reads current active state,
+qualification, role state, assignment revisions, the slot's current assignee,
+and other live assignments across week boundaries.
+
+Availability inputs cover every actual calendar date touched by the full
+shift. Frozen blocks remain separate from editable cells so the service can
+apply frozen precedence without rounding.
+
+The reader exposes no HTTP endpoint and grants no direct table access.
+Candidate evaluation must use one consistent transaction snapshot; saving
+must lock and re-read inputs rather than trust an earlier candidate result.
+Protected assignment writes, configurable rest policy, and browser candidate
+controls remain pending.
+
+Focused disposable checks cover authorized projection, current assignment
+identity, fresh employee state, invalid employee/session denial, storage
+constraints and rollback. No source employee assignments are created.
+Recovery inventory includes twenty tables and thirty-one migrations.

@@ -32,7 +32,8 @@ def install(version, database, rehearse=False):
         "0027_template_destination_scope",
         "0028_employee_rollover_profile",
         "0029_business_day_dst_guards",
-        "0030_assignment_storage"
+        "0030_assignment_storage",
+        "0031_assignment_candidate_inputs"
     ), "Unsupported migration.")
     require(
         database == "shift_scheduling"
@@ -99,6 +100,7 @@ def install(version, database, rehearse=False):
         "0028_employee_rollover_profile": (set(), []),
         "0029_business_day_dst_guards": (set(), []),
         "0030_assignment_storage": (set(), []),
+        "0031_assignment_candidate_inputs": (set(), []),
         "0022_business_day_storage": (
             {"location", "schedule_week", "schedule_template"},
             ["business_day_start_minute"],
@@ -174,6 +176,8 @@ def install(version, database, rehearse=False):
         require(actual == expected, "Existing records changed during migration.")
 
     signature = {
+        "0031_assignment_candidate_inputs":
+            "scheduling.read_assignment_inputs(uuid,uuid)",
         "0007_account_access_management":
             "scheduling.employee_account_access(uuid,uuid,jsonb)",
         "0008_location_settings":
