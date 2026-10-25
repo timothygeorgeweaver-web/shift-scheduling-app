@@ -490,3 +490,16 @@ dialog.shift-popup {
   background: #edf2f7;
   font-weight: 650;
 }
+
+/* Keep schedule month controls aligned with the calendar width. */
+.schedules .planner-navigation {
+  width: min(100%, 680px);
+  max-width: 680px;
+  box-sizing: border-box;
+}
+.schedule-grid-time small {
+  display: block;
+  margin-top: 3px;
+  font-size: 10px;
+  line-height: 1.2;
+}

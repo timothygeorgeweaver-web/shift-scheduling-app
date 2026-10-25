@@ -151,3 +151,23 @@ Restaurant labor should align with the operating day rather than midnight.
 The initial shared helpers reject ambiguous or nonexistent rollover boundaries
 rather than guessing an instant. Configuration safeguards and planner display
 of DST transitions require integration checks before release.
+
+## Selected-week controls and template application approved October 25, 2026
+
+The calendar becomes the primary week selector. Selecting a week-start date
+shows its relevant actions together below the calendar:
+Create blank week, Open week, Save as Template, Copy this week, Delete week
+and Apply Template. Existing draft weeks remain selectable.
+
+Delete week removes the draft from normal use and frees its date for a fresh
+week. Its shifts and immutable audit history are retained internally.
+Published/non-draft deletion is not part of this operation.
+
+Apply Template supports a week with or without an existing draft.
+The scheduler chooses Append or Replace all shifts.
+Append retains existing shifts; Replace retires them and inserts the pattern.
+Replacement must be confirmed, revision-protected and atomic with its audit.
+An insertion failure must restore all previous shifts.
+
+Month controls should align with the calendar instead of the full workspace.
+Next Day appears on a separate line beneath planner clock times.

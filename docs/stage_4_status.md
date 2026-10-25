@@ -156,3 +156,18 @@ after a later location-policy change.
 
 Browser acceptance, administrator controls, employee unavailability integration,
 DST rollover-boundary safeguards and daily labor allocation remain pending.
+
+## Whole-week removal foundation
+
+Migration 0026 adds audited draft-week removal and a deleted_at marker.
+Live week listing, detail, overlap checks and shift writes exclude deleted weeks.
+A partial unique index permits a new week on a deleted week's original date.
+
+Removal retires active shifts and preserves historical rows. The operation
+requires staff authorization, CSRF and the exact week revision; non-draft
+weeks are denied. Targeted checks cover rollback on audit failure and fresh
+recreation without inherited shifts.
+
+The calendar/action-panel redesign and Append/Replace template application
+remain pending. The week-removal browser button is not connected yet.
+Month navigation width and Next Day line layout have been adjusted.

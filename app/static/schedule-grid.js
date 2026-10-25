@@ -61,7 +61,7 @@ export function createScheduleGrid(parent, data, roles, choose, scrollTop = 1408
     const time = clockMinute(minute);
     const nextCalendarDay = minute < rollover;
     const label = node("div", time, grid);
-    if (nextCalendarDay) node("small", "Next day", label);
+    if (nextCalendarDay) node("small", "Next Day", label);
     label.className = "schedule-grid-time";
     for (let offset = 0; offset < 7; offset++) {
       const day = addDays(data.week.week_start_date, offset);

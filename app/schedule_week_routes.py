@@ -70,3 +70,30 @@ def create_week(
             ).fetchone()["result"]
         except psycopg.Error as error:
             fail(error)
+
+
+class RemoveWeek(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    expected_week_revision: StrictInt = Field(ge=1, le=2147483646)
+
+
+@router.post("/locations/{location_id}/schedule-weeks/{week_id}/remove")
+def remove_week(
+    location_id: UUID, week_id: UUID, body: RemoveWeek,
+    token: str = Depends(mutation_token),
+):
+    with staff_connection(token, write=True) as conn:
+        authorized_location(conn, location_id)
+        try:
+            return conn.execute(
+                "SELECT scheduling.remove_draft_schedule_week(%s,%s,%s) AS result",
+                (location_id, week_id, body.expected_week_revision),
+            ).fetchone()["result"]
+        except psycopg.Error as error:
+            statuses = {"42501": 404, "40001": 409, "55000": 423}
+            if error.sqlstate in statuses:
+                raise HTTPException(
+                    status_code=statuses[error.sqlstate],
+                    detail="The draft week changed or is unavailable. Refresh before deleting.",
+                ) from None
+            raise
