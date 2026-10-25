@@ -51,7 +51,8 @@ def install(version, database, rehearse=False):
         "0046_assignment_warning_visibility",
         "0047_schedule_publications",
         "0048_publication_review_scope",
-        "0049_publication_cell_locks"
+        "0049_publication_cell_locks",
+        "0050_publication_availability_snapshots"
     ), "Unsupported migration.")
     require(
         database == "shift_scheduling"
@@ -136,6 +137,7 @@ def install(version, database, rehearse=False):
         "0047_schedule_publications": (set(), []),
         "0048_publication_review_scope": (set(), []),
         "0049_publication_cell_locks": (set(), []),
+        "0050_publication_availability_snapshots": (set(), []),
         "0032_assignment_rest_policy": ({"location"}, [
             "rest_window_start_minute", "rest_window_end_minute",
             "minimum_rest_minutes",
@@ -213,6 +215,13 @@ def install(version, database, rehearse=False):
         )
         require(after["data"]["schedule_publication"]["rows"] == 0,
                 "Migration unexpectedly published schedules.")
+    if version == "0050_publication_availability_snapshots":
+        require(
+            set(after["data"])-set(before["data"]) == {"publication_availability"},
+            "Unexpected private publication tables.",
+        )
+        require(after["data"]["publication_availability"]["rows"] == 0,
+                "Migration unexpectedly seeded private snapshots.")
     for table, value in before["data"].items():
         if table not in stripped | {"schema_migration"}:
             require(after["data"][table] == value,
@@ -227,6 +236,8 @@ def install(version, database, rehearse=False):
         require(actual == expected, "Existing records changed during migration.")
 
     signature = {
+        "0050_publication_availability_snapshots":
+            "scheduling.read_schedule_publication_history(uuid)",
         "0049_publication_cell_locks":
             "scheduling.read_my_planner(uuid,date)",
         "0048_publication_review_scope":

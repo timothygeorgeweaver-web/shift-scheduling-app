@@ -125,3 +125,28 @@ No real publication is created by installation.
 Private effective-availability snapshots, frozen-interval integration and the
 atomic publication writer remain pending.
 Recovery inventory: 22 tables and 49 reviewed migrations.
+
+## Private publication availability evidence
+
+Every new publication automatically captures private effective availability
+for all existing location employees, including inactive profiles, across its
+exact calendar-date portions. Existing frozen intervals take precedence over
+editable cells. Off-quarter minutes are clipped exactly without rounding.
+
+Snapshot rows are tenant-scoped, immutable and inaccessible directly to the
+runtime. Employee-safe roster snapshots remain separate from this evidence.
+
+A shared database guard prevents later frozen-date insert/update/delete from
+changing published effective minutes. Changes confined to adjacent-week
+portions remain possible under the other existing authorization/cutoff rules.
+
+Publication and snapshot inserts share one transaction. A failure on the final
+snapshot date rolls back the publication and all preceding snapshot rows.
+
+Focused disposable certification covers exact clipping, both employee states,
+history immutability, frozen-interval protection, adjacent portions, private
+access and complete failure rollback. No real publication is created.
+Recovery inventory: 23 tables and 50 reviewed migrations.
+
+The next step is the protected publication writer, combining fresh review,
+explicit confirmations, immutable roster/snapshot creation and final audit.
