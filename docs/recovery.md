@@ -36,3 +36,16 @@ remain operational work for the later deployment/pilot stage.
 If a step fails, preserve the checkpoint directory and recovery database.
 Do not drop or overwrite them. A checkpoint is verified only when
 CHECKPOINT_RESULT=PASS is printed.
+
+
+## Verified Stage 4 closure
+
+- Implementation commit: `76a1668e15cd2e8e6722e18f535368517ba22055`.
+- Checkpoint: `/home/timothygeorgeweaver/shift-scheduling-evidence/checkpoints/20261025T215230373770Z`.
+- Recovery database: `shift_scheduling_restore_20261025t215230373770z`.
+- Independent restore and source preservation: PASS.
+- Inventory: 21 tables and 46 reviewed migrations.
+- Regression: 450 full-suite tests; 37 additional targeted recovery-comparison tests.
+- Owner browser acceptance: PASS.
+- Current handoff: `docs/stage_4_status.md`.
+- The checkpoint bundle captures the implementation commit above; this following documentation commit records closure.
