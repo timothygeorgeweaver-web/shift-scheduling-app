@@ -67,3 +67,23 @@ process following forced process termination.
 The service is enabled for the user session. Linux environment availability,
 hosted deployment, encrypted routine backups, and pilot sign-off remain open.
 See runtime_service.md for operating commands.
+
+## Revised V1 acceptance boundary — October 25, 2026
+
+The owner approved product_roadmap.md.
+
+The immediate Stage 6 target is a locally operated desktop build ready
+for comprehensive owner mock testing. Final V1 acceptance follows that
+test and resolution of material findings.
+
+Hosting, HTTPS, unattended encrypted backup operations, jurisdiction-specific
+live-use requirements, and real-business pilot sign-off remain tracked
+deployment gates. They are deferred beyond the local mock-test milestone,
+not represented as completed.
+
+Phone-browser optimization is no longer a V1 acceptance requirement.
+Dedicated employee mobile collaboration is V3. V1–V3 is the planned
+potential business-demo milestone.
+
+Earlier release-gate lists in this document should be read with this
+revised milestone boundary.

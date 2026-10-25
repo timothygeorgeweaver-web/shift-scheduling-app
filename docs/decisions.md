@@ -180,3 +180,21 @@ Unfilled in the published team roster.
 
 Unfilled coverage does not waive hard assignment restrictions or the
 requirement for current, documented approvals of soft assignment warnings.
+
+## Approved roadmap revision — October 25, 2026
+
+The product owner approved the version sequence in product_roadmap.md:
+V1 Manual Scheduling, V2 Random Assignment, V3 Mobile Collaboration,
+V4 Skills, V5 Performance, and V6 Fairness.
+
+V1–V3 is the target for a potential business demo. Random assignment is
+a central product differentiator. The employee mobile app must support
+unavailability, messaging, shift trades and pickups, and assigned shifts.
+
+V1 acceptance is desktop-focused. Complete local readiness, then perform
+owner testing with a full mock staff and realistic shifts before accepting
+V1 and proceeding to V2. Online hosting and a real-business pilot follow
+the mock test; live-use readiness remains a separate gate.
+
+This decision supersedes conflicting earlier version ordering and
+phone-browser acceptance requirements. It does not remove existing features.
