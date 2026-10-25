@@ -593,3 +593,23 @@ remain disabled.
 Trusted commit integration and assignment-aware shift edits, removals and
 template replacement are required before enabling runtime assignment saves.
 Recovery inventory includes twenty tables and thirty-five migrations.
+
+## Assignment-aware shift lifecycle
+
+Shift deactivation now retires any live assignment in the same transaction
+and records assignment retirement audit history. Immutable approval records
+remain intact. Existing shift removal, whole-week removal and template
+replacement paths deactivate shifts and therefore pass through this guard.
+
+Changes to role or timing on an assigned active shift are temporarily denied
+until the protected edit-and-revalidate service is connected. Revision-only
+updates and changes to unassigned shifts retain existing behavior.
+
+Focused disposable checks cover assignment retirement, retained approvals,
+assigned timing-change denial, and rollback of both shift and assignment
+changes when retirement audit insertion fails. These checks exercise the
+shared database trigger; end-to-end week/template scenarios remain part of
+the later assignment integration certification.
+
+Runtime assignment creation remains disabled.
+Recovery inventory includes twenty tables and thirty-six migrations.
