@@ -639,3 +639,23 @@ No source employee assignments are created by certification.
 Browser assignment controls, explicit unassignment, assigned shift editing,
 affected-assignment review and mixed-policy reconciliation remain pending.
 Recovery inventory includes twenty tables and thirty-seven migrations.
+
+## Current assignee display and explicit unassignment
+
+Week-detail HTTP responses now include a separate current-assignment summary
+with employee identity and assignment revision. Private approval reasons and
+rule details are excluded. The underlying shift-pattern read remains
+unchanged, so template and copy snapshots do not acquire assignee details.
+
+Added CSRF-protected explicit unassignment with expected assignment, shift,
+week and location revisions. Unassignment retires the assignment, advances
+schedule revisions and writes audit history atomically. The shift and
+immutable approval records are retained.
+
+Focused disposable HTTP checks cover current-assignee projection, stale
+unassignment denial, required CSRF, successful removal and full rollback
+when the final unassignment audit insert fails.
+
+Browser assignment controls and the remaining assignment review/edit
+integration are pending. No source assignments are changed by certification.
+Recovery inventory includes twenty tables and thirty-eight migrations.

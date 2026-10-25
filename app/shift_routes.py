@@ -59,7 +59,12 @@ def schedule_detail(
 ):
     with staff_connection(token) as conn:
         try:
-            return read_week(conn, location_id, week_id)
+            result = read_week(conn, location_id, week_id)
+            result["assignments"] = conn.execute(
+                "SELECT scheduling.read_schedule_assignments(%s) AS result",
+                (week_id,),
+            ).fetchone()["result"]
+            return result
         except psycopg.Error as error:
             fail(error)
 

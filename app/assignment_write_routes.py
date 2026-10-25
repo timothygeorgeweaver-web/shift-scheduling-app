@@ -78,3 +78,40 @@ def assign_employee(
             raise HTTPException(status_code=409, detail=str(error)) from None
         except psycopg.Error as error:
             fail(error)
+
+
+from pydantic import BaseModel, ConfigDict, Field, StrictInt
+
+
+class UnassignEmployee(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    expected_assignment_id: UUID
+    expected_assignment_revision: StrictInt = Field(ge=1, le=2147483646)
+    expected_week_revision: StrictInt = Field(ge=1, le=2147483646)
+    expected_slot_revision: StrictInt = Field(ge=1, le=2147483646)
+    expected_location_revision: StrictInt = Field(ge=1, le=2147483646)
+
+
+@router.post(
+    "/locations/{location_id}/schedule-weeks/{week_id}"
+    "/shifts/{slot_id}/assignment/remove"
+)
+def unassign_employee(
+    location_id: UUID, week_id: UUID, slot_id: UUID,
+    body: UnassignEmployee, token: str = Depends(mutation_token),
+):
+    with staff_connection(token, write=True) as conn:
+        try:
+            data = read_week(conn, location_id, week_id)
+            if not any(row["id"] == str(slot_id) for row in data["slots"]):
+                raise HTTPException(status_code=404, detail="Shift was not found.")
+            return conn.execute(
+                "SELECT scheduling.unassign_draft_shift(%s,%s,%s,%s,%s,%s) AS result",
+                (
+                    slot_id, body.expected_assignment_id,
+                    body.expected_assignment_revision, body.expected_week_revision,
+                    body.expected_slot_revision, body.expected_location_revision,
+                ),
+            ).fetchone()["result"]
+        except psycopg.Error as error:
+            fail(error)
