@@ -1,6 +1,6 @@
-import {createStaffManager} from "/static/staff.js?v=10";
+import {createStaffManager} from "/static/staff.js?v=11";
 import {createUnavailabilityManager} from "/static/unavailability.js?v=3";
-import {createScheduleManager} from "/static/schedules.js?v=18";
+import {createScheduleManager} from "/static/schedules.js?v=19";
 
 (() => {
   "use strict";
@@ -8,12 +8,13 @@ import {createScheduleManager} from "/static/schedules.js?v=18";
   const byId = (id) => document.getElementById(id);
   let csrfToken = "";
   const schedules = createScheduleManager({
+    onEditorOpen: value => staff.setScheduleEditorOpen(value),
     api, expired: () => showLogin("Your session ended. Please sign in again.")
   });
   const unavailability = createUnavailabilityManager({
     api, expired: () => showLogin("Your session ended. Please sign in again.")
   });
-  const staff = createStaffManager({api, expired: () => showLogin("Your session ended. Please sign in again.")});
+  const staff = createStaffManager({api, onBusinessDaySaved: locationId => schedules.policySaved(locationId), expired: () => showLogin("Your session ended. Please sign in again.")});
 
   function message(id, text) {
     byId(id).textContent = text;

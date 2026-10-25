@@ -528,3 +528,9 @@ dialog.shift-popup {
   opacity: .45;
   cursor: not-allowed;
 }
+
+.rollover-save-notice {
+  margin-left: 12px;
+  font-size: 13px;
+  color: var(--muted);
+}

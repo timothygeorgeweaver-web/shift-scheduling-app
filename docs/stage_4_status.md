@@ -224,3 +224,19 @@ protection. Asset serving passes. Owner browser acceptance remains pending.
 
 Employee unavailability/mass-edit rollover integration, business-day labor
 allocation and DST rollover-boundary safeguards remain pending.
+
+## Rollover save protection and automatic calendar refresh
+
+Save business-day rollover is disabled while a schedule week or template editor
+is open. A message beside it says Please close open week before saving.
+Closing the editor updates button availability immediately. Form submission
+also checks editor state, preventing Enter-key submission while blocked.
+
+Confirmed policy saves automatically refresh the matching schedule calendar.
+A request already in progress is allowed to finish before refreshing.
+The normal Refresh calendar button is removed; a retry button appears only
+when calendar loading is unavailable.
+
+Local syntax and simulated interaction checks cover initially open editors,
+opening/closing after form load, blocked submission, confirmed-save refresh,
+failed-save retry protection, and reset cleanup. Asset serving passes.

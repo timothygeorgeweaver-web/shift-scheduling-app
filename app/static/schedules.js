@@ -4,12 +4,13 @@ import {askTemplateName} from "/static/template-name-dialog.js?v=1";
 import {createTemplateEditor} from "/static/template-editor.js?v=4";
 import {askTemplateApplication} from "/static/template-apply-dialog.js?v=1";
 
-export function createScheduleManager({api, expired}) {
-  let root = null, epoch = 0, dispose = () => {};
+export function createScheduleManager({api, expired, onEditorOpen = () => {}}) {
+  let root = null, epoch = 0, dispose = () => {}, policyRefresh = () => {};
   function reset() {
     epoch++;
     dispose();
     dispose = () => {};
+    policyRefresh = () => {};
     root?.remove();
     root = null;
   }
@@ -25,7 +26,7 @@ export function createScheduleManager({api, expired}) {
     const names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
     let month = new Date().toISOString().slice(0, 7);
     let state = null, templates = [], selected = "", copySource = null;
-    let busy = false, ready = false, editorOpen = false;
+    let busy = false, ready = false, editorOpen = false, pendingRefresh = false;
 
     const panel = node("section");
     root = panel;
@@ -101,11 +102,23 @@ export function createScheduleManager({api, expired}) {
     }
     function lockOuter(value) {
       editorOpen = value;
+      onEditorOpen(value);
       updateLocks();
+      if (!value) flushPolicyRefresh();
+    }
+    function flushPolicyRefresh() {
+      if (!pendingRefresh || busy || editorOpen || !active()) return;
+      pendingRefresh = false;
+      copySource = null;
+      task(async () => {
+        await load(selected);
+        say("Business-day rollover updated. Calendar refreshed.");
+      });
     }
     function updateLocks() {
       if (!active()) return;
       controls.disabled = busy || editorOpen;
+      retry.hidden = ready || busy || editorOpen;
       picker.disabled = actions.disabled = busy || editorOpen || !ready;
       for (const button of templatesView.querySelectorAll("button")) {
         button.disabled = busy || editorOpen || !ready;
@@ -182,6 +195,7 @@ export function createScheduleManager({api, expired}) {
         if (active()) {
           panel.setAttribute("aria-busy", "false");
           renderActions();
+          flushPolicyRefresh();
         }
       }
     }
@@ -387,8 +401,14 @@ export function createScheduleManager({api, expired}) {
       });
     }
 
-    action("Refresh calendar", controls, () => task(() => load(selected)));
+    policyRefresh = locationId => {
+      if (!active() || locationId !== select.value) return;
+      pendingRefresh = true;
+      flushPolicyRefresh();
+    };
+    const retry = action("Retry loading calendar", controls, () => task(() => load(selected)));
     select.addEventListener("change", () => {
+      pendingRefresh = false;
       copySource = null;
       task(() => load(""));
     });
@@ -407,5 +427,5 @@ export function createScheduleManager({api, expired}) {
       await load("");
     });
   }
-  return {start, reset};
+  return {start, reset, policySaved(locationId) { policyRefresh(locationId); }};
 }

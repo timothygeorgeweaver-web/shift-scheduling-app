@@ -1,11 +1,12 @@
 "use strict";
 
-export function createStaffManager({api, expired}) {
+export function createStaffManager({api, expired, onBusinessDaySaved = () => {}}) {
   const root = document.createElement("section");
   root.className = "team";
   root.hidden = true;
   document.getElementById("account-view").append(root);
-  let generation = 0;
+  let generation = 0, scheduleEditorOpen = false;
+  let refreshRolloverLock = () => {};
 
   function element(tag, text = "", className = "") {
     const node = document.createElement(tag);
@@ -16,6 +17,7 @@ export function createStaffManager({api, expired}) {
 
   function reset() {
     generation += 1;
+    refreshRolloverLock = () => {};
     root.replaceChildren();
     root.hidden = true;
   }
@@ -85,6 +87,7 @@ export function createStaffManager({api, expired}) {
       content.querySelectorAll("fieldset").forEach(node => {
         node.disabled = value;
       });
+      refreshRolloverLock();
     }
 
     async function run(work) {
@@ -137,6 +140,9 @@ export function createStaffManager({api, expired}) {
 
     async function save(path, method, body) {
       const saved = await request(path, method, body);
+      if (path.endsWith("/business-day-policy") && alive()) {
+        onBusinessDaySaved(saved.location_id);
+      }
       if (path.endsWith("/settings") && alive()) {
         location.selectedOptions[0].textContent =
           saved.business_name + " / " + saved.location_name;
@@ -387,18 +393,25 @@ export function createStaffManager({api, expired}) {
         fields.append(element("p",
           "Default: 05:00. New schedule weeks and new templates capture this setting. " +
           "Existing weeks and templates keep their saved rollover. " +
-          "Refresh the schedule calendar after saving before creating a week or template.",
+          "The schedule calendar updates automatically after saving.",
           "description"));
         const message = element("p", "", "team-status");
         message.setAttribute("role", "status");
         fields.append(message);
         const saveButton = submit("Save business-day rollover");
-        fields.append(saveButton);
+        const openNotice = element("span", "Please close open week before saving.", "rollover-save-notice");
+        openNotice.setAttribute("role", "status");
+        fields.append(saveButton, openNotice);
         form.append(fields);
         let blocked = false;
+        refreshRolloverLock = () => {
+          if (!alive() || !form.isConnected) return;
+          saveButton.disabled = blocked || busy || scheduleEditorOpen;
+          openNotice.hidden = !scheduleEditorOpen;
+        };
         form.addEventListener("submit", event => {
           event.preventDefault();
-          if (busy || blocked || !form.reportValidity()) return;
+          if (busy || blocked || scheduleEditorOpen || !form.reportValidity()) return;
           saveButton.disabled = true;
           run(async () => {
             try {
@@ -707,5 +720,10 @@ export function createStaffManager({api, expired}) {
     });
   }
 
-  return {start, reset};
+  return {start, reset,
+    setScheduleEditorOpen(value) {
+      scheduleEditorOpen = Boolean(value);
+      refreshRolloverLock();
+    }
+  };
 }
