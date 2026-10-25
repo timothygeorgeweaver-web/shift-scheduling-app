@@ -249,6 +249,13 @@ export function createAssignmentEditor({api, expired, identity, parent, onOpen})
           card.className = "schedule-start-card assignment-card";
           node("strong", shift.role_name, card);
           node("span", assigned?.display_name ?? "Unassigned", card);
+          if (assigned?.review_status === "pending" ||
+              assigned?.review_status === "needs_review") {
+            const badge = node("small",
+              assigned.review_status === "pending"
+                ? "Needs recheck" : "Needs review", card);
+            badge.className = "assignment-review-badge";
+          }
           card.classList.toggle("assignment-unassigned", !assigned);
           card.setAttribute("aria-label",
             `${shift.role_name}, ${day}, ${clockMinute(minute)}, ` +
@@ -288,6 +295,21 @@ export function createAssignmentEditor({api, expired, identity, parent, onOpen})
     status.setAttribute("role", "status");
     controls = node("fieldset", "", root);
     node("legend", "Assignment controls", controls);
+    action("Review assignments", controls, async () => {
+      if (!data || !(await canClose())) return;
+      task(async current => {
+        const result = await request(endpoint() + "/assignments/review", {
+          method: "POST",
+          body: JSON.stringify({
+            expected_week_revision: data.week.revision,
+            expected_location_revision: data.location_revision
+          })
+        }, current);
+        await load(current);
+        say(`${result.reviewed_count} assignments checked; ` +
+          `${result.needs_review_count} still need review.`);
+      });
+    });
     action("Refresh assigner", controls, async () => {
       if ((await canClose())) task(load);
     });

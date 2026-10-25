@@ -42,7 +42,8 @@ def install(version, database, rehearse=False):
         "0037_assignment_commit_bridge",
         "0038_assignment_reads_and_unassign",
         "0039_clear_week_assignments",
-        "0040_assignment_review_events"
+        "0040_assignment_review_events",
+        "0041_assignment_review_results"
     ), "Unsupported migration.")
     require(
         database == "shift_scheduling"
@@ -118,6 +119,7 @@ def install(version, database, rehearse=False):
         "0038_assignment_reads_and_unassign": (set(), []),
         "0039_clear_week_assignments": (set(), []),
         "0040_assignment_review_events": (set(), []),
+        "0041_assignment_review_results": (set(), []),
         "0032_assignment_rest_policy": ({"location"}, [
             "rest_window_start_minute", "rest_window_end_minute",
             "minimum_rest_minutes",
@@ -202,6 +204,8 @@ def install(version, database, rehearse=False):
         require(actual == expected, "Existing records changed during migration.")
 
     signature = {
+        "0041_assignment_review_results":
+            "scheduling.store_assignment_review(uuid,text,jsonb)",
         "0040_assignment_review_events":
             "scheduling.lock_assignment_scope(uuid,uuid,integer,integer,integer)",
         "0039_clear_week_assignments":

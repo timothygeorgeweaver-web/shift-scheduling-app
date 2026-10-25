@@ -800,3 +800,24 @@ will cover the remaining trigger paths.
 No source assignments or policies are modified by certification.
 Review evaluation persistence and display are next.
 Recovery inventory includes twenty-one tables and forty migrations.
+
+## Assignment review evaluation and display
+
+Added a CSRF-protected week review action. It locks fresh assignment inputs,
+runs the shared reassessment rules and persists immutable clear/needs-review
+results with atomic audit history. Already-clear assignments are skipped.
+No assignments or approvals are removed by reassessment.
+
+The runtime review bridge binds trusted server reports to current authorized
+input fingerprints. Assignment summaries expose status and rule codes while
+keeping private review records inaccessible as tables.
+
+The assigner now provides Review assignments and displays Needs recheck or
+Needs review on affected cards. Reassigning with fresh required approvals
+or explicitly unassigning remains the way to resolve a conflict.
+
+Focused disposable checks cover pending/conflicting/resolved states,
+clear no-op behavior, assignment preservation and review audit rollback.
+Source assignments are unchanged by certification.
+Browser acceptance remains pending.
+Recovery inventory includes twenty-one tables and forty-one migrations.

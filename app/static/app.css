@@ -606,3 +606,13 @@ dialog.shift-popup {
 .action-confirm-dialog button {
   min-height: 40px;
 }
+
+.assignment-review-badge {
+  display: inline-block;
+  margin-top: .25rem;
+  padding: .2rem .4rem;
+  border-radius: .3rem;
+  background: #fff1cc;
+  color: #674800;
+  font-weight: 600;
+}
