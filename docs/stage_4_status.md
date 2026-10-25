@@ -336,3 +336,21 @@ return controls remain outside the hidden grid.
 Local syntax and simulated interaction checks cover hiding/showing without
 requests or grid reconstruction, preservation of unsaved cells, accessible
 expanded state, and mass preview submission while hidden. Asset serving passes.
+
+## Exact business-day labor allocation
+
+Shared labor calculation now splits actual elapsed shift time at the configured
+local business-day rollover. Overnight hours before rollover stay in the prior
+business day. A shift ending exactly at rollover creates no empty next-day row.
+
+The approved single 30-minute estimate applies only when the full shift exceeds
+six elapsed hours. Its allocation across business days is proportional to each
+day's elapsed portion. Exact fractions avoid intermediate rounding errors.
+
+Tests cover midnight compatibility, configurable rollover, overnight grouping,
+exact-boundary ends, fractional conservation, six-hour thresholds, 23/25-hour
+DST days and explicit rejection of ambiguous/nonexistent rollover boundaries.
+
+This is pure calculation only. It does not alter shifts, schedule lunch times,
+record meals or make payroll deductions. Eligibility aggregation and browser
+labor totals are not connected yet. Overlap/rest retain full shift endpoints.
