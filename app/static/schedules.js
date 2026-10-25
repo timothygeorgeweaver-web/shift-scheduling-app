@@ -2,14 +2,14 @@ import {node, action, addDays, weekday} from "/static/planner-grid.js?v=2";
 import {createShiftEditor} from "/static/shift-editor.js?v=10";
 import {askTemplateName} from "/static/template-name-dialog.js?v=1";
 import {createTemplateEditor} from "/static/template-editor.js?v=4";
+import {askTemplateApplication} from "/static/template-apply-dialog.js?v=1";
 
 export function createScheduleManager({api, expired}) {
-  let root = null, epoch = 0, closeShifts = () => {};
-
+  let root = null, epoch = 0, dispose = () => {};
   function reset() {
     epoch++;
-    closeShifts();
-    closeShifts = () => {};
+    dispose();
+    dispose = () => {};
     root?.remove();
     root = null;
   }
@@ -19,223 +19,125 @@ export function createScheduleManager({api, expired}) {
     if (!identity.memberships.some(m =>
       m.permissions.some(p => p === "administrator" || p === "scheduler")
     )) return;
-
     const generation = epoch;
     const active = () => generation === epoch;
+    const abort = new AbortController();
     const names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+    let month = new Date().toISOString().slice(0, 7);
+    let state = null, templates = [], selected = "", copySource = null;
+    let busy = false, ready = false, editorOpen = false;
+
     const panel = node("section");
     root = panel;
     panel.className = "team schedules";
     panel.setAttribute("aria-label", "Schedules");
     document.getElementById("account-view").append(panel);
     node("h2", "Schedules", panel);
-    node("p", "Select an available week-start date, then create a blank draft.", panel);
-
+    node("p", "Select a week-start date, then choose an action below the calendar.", panel);
     const status = node("p", "Loading workplaces…", panel);
     status.className = "team-status";
     status.setAttribute("role", "status");
-
     const controls = node("fieldset", "", panel);
     node("legend", "Workplace", controls);
-    const workplace = node("label", "Workplace", controls);
-    const select = node("select", "", workplace);
-
-    const form = node("form", "", panel);
-    const fields = node("fieldset", "", form);
-    const formTitle = node("legend", "Create blank week", fields);
-    const copyNotice = node("p", "", fields);
-    copyNotice.setAttribute("role", "status");
-    copyNotice.hidden = true;
-    const cancelCopy = action("Cancel copying", fields, () => {
-      if (busy) return;
-      copySource = null;
-      updateCopyMode();
-      if (ready) renderCalendar();
-      say("Selection cancelled. You can create a blank week.");
-    });
-    cancelCopy.hidden = true;
-    const policy = node("p", "", fields);
-    const navigation = node("div", "", fields);
+    const select = node("select", "", node("label", "Workplace", controls));
+    const picker = node("fieldset", "", panel);
+    picker.className = "schedule-calendar";
+    node("legend", "Select a week", picker);
+    const policy = node("p", "", picker);
+    const navigation = node("div", "", picker);
     navigation.className = "planner-navigation";
-    const calendar = node("div", "", fields);
-    const selection = node("p", "Choose an available week-start date.", fields);
+    const calendar = node("div", "", picker);
+    const actions = node("fieldset", "", panel);
+    actions.className = "selected-week-actions";
+    const actionTitle = node("legend", "Week actions", actions);
+    const selection = node("p", "Choose a week-start date above.", actions);
     selection.setAttribute("role", "status");
-    const create = node("button", "Create blank week", fields);
-    create.type = "submit";
-    create.className = "button secondary";
-    create.disabled = true;
+    const copyNotice = node("p", "", actions);
+    const buttons = node("div", "", actions);
+    buttons.className = "selected-week-buttons";
+    const create = action("Create blank week", buttons, createBlank);
+    const open = action("Open week", buttons, openWeek);
+    const save = action("Save as Template", buttons, saveTemplate);
+    const copy = action("Copy this week", buttons, copyWeek);
+    const remove = action("Delete week", buttons, deleteWeek);
+    const apply = action("Apply Template", buttons, applyTemplate);
+    const cancelCopy = action("Cancel copying", actions, () => {
+      copySource = null;
+      renderActions();
+      say("Copying cancelled.");
+    });
     const templatesView = node("div", "", panel);
-    const list = node("div", "", panel);
 
-    let month = new Date().toISOString().slice(0, 7);
-    let state = null, selected = "", busy = false, ready = false;
-    let copySource = null;
-    function lockOuter(open) {
-      if (!active()) return;
-      controls.disabled = open || busy;
-      fields.disabled = open || busy || !ready;
-      [...list.querySelectorAll("button"),
-       ...templatesView.querySelectorAll("button")].forEach(button => {
-        button.disabled = open || busy;
-      });
-    }
     const shifts = createShiftEditor({
-      api, expired, identity, parent: panel, onOpen: lockOuter
+      api, expired, identity, parent: panel, onOpen: value => {
+        const wasOpen = editorOpen;
+        lockOuter(value);
+        if (wasOpen && !value && !busy && active()) task(() => load(selected));
+      }
     });
     const templateEditor = createTemplateEditor({
       api, expired, identity, parent: panel, onOpen: lockOuter,
       onSaved: () => task(async () => {
-        copySource = null;
-        await load();
+        await load(selected);
         say("Template saved.");
       })
     });
-    closeShifts = () => {
+    dispose = () => {
+      abort.abort();
       shifts.destroy();
       templateEditor.destroy();
     };
     const say = text => { if (active()) status.textContent = text; };
-    const url = () => "/api/v1/staff/locations/" +
-      encodeURIComponent(select.value) + "/schedule-weeks";
-
-    const templateUrl = () => "/api/v1/staff/locations/" +
-      encodeURIComponent(select.value) + "/schedule-templates";
-
-    function updateCopyMode() {
-      const template = copySource?.kind === "template";
-      formTitle.textContent = template ? "Create week from template" :
-        copySource ? "Copy schedule week" : "Create blank week";
-      create.textContent = template ? "Create from template" :
-        copySource ? "Copy week" : "Create blank week";
-      cancelCopy.textContent = template ? "Cancel template selection" : "Cancel copying";
-      copyNotice.hidden = cancelCopy.hidden = !copySource;
-      copyNotice.textContent = template
-        ? `Using template: ${copySource.name} (${copySource.shift_count} shifts). ` +
-          "Choose an unused destination week. All shifts will be unassigned."
-        : copySource
-        ? `Copying ${copySource.week_start_date} – ${addDays(copySource.week_start_date, 6)}. ` +
-          "Choose an unused destination week. All copied shifts will be unassigned."
+    const base = () => "/api/v1/staff/locations/" + encodeURIComponent(select.value);
+    const weeksUrl = () => base() + "/schedule-weeks";
+    const templatesUrl = () => base() + "/schedule-templates";
+    const selectedWeek = () => state?.weeks.find(week => week.week_start_date === selected);
+    const covered = day => state?.weeks.find(week =>
+      week.week_start_date <= addDays(day, 6) && addDays(week.week_start_date, 6) >= day
+    );
+    function validSelection() {
+      return ready && !!selected && weekday(selected) === state.location.week_start_day &&
+        (!covered(selected) || !!selectedWeek());
+    }
+    function lockOuter(value) {
+      editorOpen = value;
+      updateLocks();
+    }
+    function updateLocks() {
+      if (!active()) return;
+      controls.disabled = busy || editorOpen;
+      picker.disabled = actions.disabled = busy || editorOpen || !ready;
+      for (const button of templatesView.querySelectorAll("button")) {
+        button.disabled = busy || editorOpen || !ready;
+      }
+    }
+    function renderActions() {
+      const valid = validSelection(), week = selectedWeek();
+      const draft = week?.state === "draft";
+      actionTitle.textContent = selected ? `Week of ${selected}` : "Week actions";
+      selection.textContent = valid
+        ? `${selected} – ${addDays(selected, 6)} · ${week ? week.state : "Not created yet"}`
+        : "Choose a week-start date above.";
+      create.disabled = !valid || !!week;
+      open.disabled = save.disabled = !valid || !week;
+      remove.disabled = !valid || !draft;
+      apply.disabled = !valid || (!!week && !draft) || !templates.length;
+      copy.textContent = copySource ? "Copy week here" : "Copy this week";
+      copy.disabled = !valid || (copySource ? !!covered(selected) : !week);
+      cancelCopy.hidden = copyNotice.hidden = !copySource;
+      copyNotice.textContent = copySource
+        ? `Copying week ${copySource.week_start_date}. Select an unused week-start date, then choose Copy week here.`
         : "";
+      apply.title = templates.length ? "" : "Create or save a template first.";
+      updateLocks();
     }
-
-    function renderTemplates(templates) {
-      templatesView.replaceChildren();
-      node("h3", "Schedule templates", templatesView);
-      action("Create New Template", templatesView, () => editTemplate());
-      if (!templates.length) {
-        node("p", "No templates yet. Use Save as template beside an existing week.",
-          templatesView);
-        return;
-      }
-      const entries = node("ul", "", templatesView);
-      for (const template of templates) {
-        const item = node("li", "", entries);
-        node("strong", template.name, item);
-        node("span", ` · ${template.shift_count} shifts`, item);
-        action("Edit Template", item, () => editTemplate(template));
-        action("Archive template", item, () => archiveTemplate(template));
-        action("Use template", item, () => {
-          if (busy || !ready) return;
-          copySource = {...template, kind: "template"};
-          renderCalendar();
-          updateCopyMode();
-          say("Choose an unused destination date, then click Create from template.");
-          fields.scrollIntoView({block: "start", behavior: "smooth"});
-        });
-      }
-    }
-
-    function editTemplate(template = null) {
-      if (busy || !ready) return;
-      copySource = null;
-      updateCopyMode();
-      shifts.reset();
-      templateEditor.open({
-        locationId: select.value,
-        locationRevision: state.location.revision,
-        rolloverMinute: state.location.business_day_start_minute,
-        templateId: template?.id ?? null
-      });
-    }
-
-    function archiveTemplate(template) {
-      if (busy || !ready || !window.confirm(
-        `Archive "${template.name}"? Existing schedule weeks stay unchanged.`
-      )) return;
-      task(async () => {
-        await request(templateUrl() + "/" + encodeURIComponent(template.id), {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            "X-CSRF-Token": identity.csrf_token
-          },
-          body: JSON.stringify({
-            name: template.name,
-            active: false,
-            expected_template_revision: template.revision
-          })
-        });
-        copySource = null;
-        await load();
-        say("Template archived.");
-      });
-    }
-
-    async function saveAsTemplate(week) {
-      if (busy || !ready) return;
-      const name = await askTemplateName(panel, week);
-      if (name === null || !active()) return;
-      task(async () => {
-        try {
-          await request(url() + "/" + encodeURIComponent(week.id) + "/templates", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "X-CSRF-Token": identity.csrf_token
-            },
-            body: JSON.stringify({
-              name, expected_source_revision: week.revision
-            })
-          });
-          await load();
-          say(`Saved template: ${name}.`);
-        } catch (error) {
-          if (error.status === 409) {
-            await load();
-            say(error.message + " Refresh complete; choose another name or reselect the week.");
-            return;
-          }
-          throw error;
-        }
-      });
-    }
-
-    function adjacentMonth(value, count) {
-      const date = new Date(value + "-01T12:00:00Z");
-      date.setUTCMonth(date.getUTCMonth() + count);
-      return date.toISOString().slice(0, 7);
-    }
-
-    function boundaries() {
+    function mutation(body, method = "POST") {
       return {
-        first: month + "-01",
-        last: addDays(adjacentMonth(month, 1) + "-01", -1)
+        method,
+        headers: {"Content-Type": "application/json", "X-CSRF-Token": identity.csrf_token},
+        body: JSON.stringify(body)
       };
     }
-
-    function coveringWeek(day) {
-      return state.weeks.find(week =>
-        week.week_start_date <= addDays(day, 6) &&
-        addDays(week.week_start_date, 6) >= day
-      );
-    }
-
-    function validSelection() {
-      return ready && selected &&
-        weekday(selected) === state.location.week_start_day &&
-        !coveringWeek(selected);
-    }
-
     async function request(path, options = {}) {
       const response = await api(path, options);
       if (!active()) throw new Error("Account changed.");
@@ -243,256 +145,266 @@ export function createScheduleManager({api, expired}) {
         expired();
         throw new Error("Please sign in again.");
       }
+      const result = await response.json().catch(() => null);
+      if (!active()) throw new Error("Account changed.");
       if (!response.ok) {
-        const failure = await response.json().catch(() => null);
-        const error = new Error(
-          response.status === 409
-            ? (typeof failure?.detail === "string" ? failure.detail :
-               "The source, destination or workplace settings changed.")
-            : response.status === 422
-            ? (typeof failure?.detail === "string" ? failure.detail :
-               "Check the selected week and workplace settings.")
-            : response.status === 403 || response.status === 404
-            ? "Schedule access is unavailable for this workplace."
-            : "The request was not confirmed. Refresh the calendar before trying again."
-        );
+        const error = new Error(typeof result?.detail === "string" ? result.detail :
+          "The request was not confirmed. Refresh the calendar before trying again.");
         error.status = response.status;
         throw error;
       }
-      const result = await response.json();
-      if (!active()) throw new Error("Account changed.");
       return result;
     }
-
     async function task(operation) {
       if (busy || !active()) return;
       busy = true;
       panel.setAttribute("aria-busy", "true");
-      controls.disabled = fields.disabled = true;
+      updateLocks();
       try {
         await operation();
       } catch (error) {
-        ready = false;
-        selected = "";
-        selection.textContent = "Refresh the calendar before choosing a week.";
-        say(error.message);
+        if (!active()) return;
+        if (error.status === 409) {
+          copySource = null;
+          try {
+            await load(selected);
+            say(error.message + " The calendar was refreshed; check the selected week.");
+          } catch {
+            ready = false;
+            say("Refresh the calendar before trying again.");
+          }
+        } else {
+          if (error.status !== 422) ready = false;
+          say(error.message);
+        }
       } finally {
         busy = false;
         if (active()) {
           panel.setAttribute("aria-busy", "false");
-          controls.disabled = false;
-          fields.disabled = !ready;
-          create.disabled = !validSelection();
+          renderActions();
         }
       }
     }
 
-    function renderCalendar() {
-      calendar.replaceChildren();
-      selected = "";
-      create.disabled = true;
-      selection.textContent = "Choose an available week-start date.";
-      const {first, last} = boundaries();
-      const grid = node("div", "", calendar);
-      grid.className = "week-picker";
-      grid.setAttribute("role", "group");
-      grid.setAttribute("aria-label", "Choose a schedule week");
-
-      for (const name of names) {
-        node("strong", name.slice(0, 3), grid).className = "week-picker-heading";
-      }
-      for (let n = 0; n < weekday(first); n++) {
-        node("span", "", grid).setAttribute("aria-hidden", "true");
-      }
-
-      const buttons = [];
-      for (let day = first; day <= last; day = addDays(day, 1)) {
-        const button = node("button", "", grid);
-        button.type = "button";
-        button.className = "week-picker-day";
-        node("span", String(Number(day.slice(-2))), button);
-
-        const correctDay = weekday(day) === state.location.week_start_day;
-        const covered = correctDay ? coveringWeek(day) : null;
-        const supported = day <= "9998-12-25";
-        button.disabled = !correctDay || !!covered || !supported;
-        button.setAttribute("aria-pressed", "false");
-
-        let explanation;
-        if (!supported) explanation = "Outside supported schedule dates";
-        else if (!correctDay) explanation = `Weeks begin ${names[state.location.week_start_day]}`;
-        else if (covered) {
-          explanation = covered.state === "draft" ? "Draft exists" : "Schedule exists";
-          node("small", explanation, button);
-          button.classList.add("week-picker-covered");
-        } else explanation = "Available week";
-
-        button.title = `${day}: ${explanation}`;
-        button.setAttribute("aria-label", `${day}: ${explanation}`);
-        button.addEventListener("click", () => {
-          if (!ready || busy || button.disabled) return;
-          selected = day;
-          for (const other of buttons) other.setAttribute("aria-pressed", "false");
-          button.setAttribute("aria-pressed", "true");
-          selection.textContent = `Selected week: ${day} – ${addDays(day, 6)}`;
-          create.disabled = !validSelection();
-        });
-        buttons.push(button);
-      }
+    function adjacentMonth(value, count) {
+      const day = new Date(value + "-01T12:00:00Z");
+      day.setUTCMonth(day.getUTCMonth() + count);
+      return day.toISOString().slice(0, 7);
     }
-
+    function boundaries() {
+      return {first: month + "-01", last: addDays(adjacentMonth(month, 1) + "-01", -1)};
+    }
     function renderNavigation() {
       navigation.replaceChildren();
       const previous = action("← Previous month", navigation, () => moveMonth(-1));
-      previous.setAttribute("aria-label", "Previous month");
       previous.disabled = month === "2000-01";
       node("h3", new Intl.DateTimeFormat("en-US", {
         month: "long", year: "numeric", timeZone: "UTC"
       }).format(new Date(month + "-01T12:00:00Z")), navigation);
       const next = action("Next month →", navigation, () => moveMonth(1));
-      next.setAttribute("aria-label", "Next month");
       next.disabled = month === "9998-12";
     }
-
     function moveMonth(count) {
+      if (busy || editorOpen) return;
       const candidate = adjacentMonth(month, count);
       if (candidate < "2000-01" || candidate > "9998-12") return;
       month = candidate;
-      task(load);
+      task(() => load(""));
     }
-
-    async function load() {
+    function renderCalendar() {
+      calendar.replaceChildren();
+      const {first, last} = boundaries();
+      const grid = node("div", "", calendar);
+      grid.className = "week-picker";
+      grid.setAttribute("role", "group");
+      grid.setAttribute("aria-label", "Choose a schedule week");
+      for (const name of names) node("strong", name.slice(0, 3), grid).className = "week-picker-heading";
+      for (let n = 0; n < weekday(first); n++) node("span", "", grid).setAttribute("aria-hidden", "true");
+      const dayButtons = [];
+      for (let day = first; day <= last; day = addDays(day, 1)) {
+        const button = node("button", "", grid);
+        button.type = "button";
+        button.className = "week-picker-day";
+        node("span", String(Number(day.slice(-2))), button);
+        const correctDay = weekday(day) === state.location.week_start_day;
+        const existing = correctDay ? covered(day) : null;
+        const exact = existing?.week_start_date === day;
+        button.disabled = !correctDay || day > "9998-12-25" || (!!existing && !exact);
+        const description = exact ? `${existing.state} week` : existing ? "Overlaps another schedule" :
+          correctDay ? "Unused week" : `Weeks begin ${names[state.location.week_start_day]}`;
+        if (existing) {
+          node("small", exact ? existing.state : "Covered", button);
+          button.classList.add("week-picker-covered");
+        }
+        button.title = `${day}: ${description}`;
+        button.setAttribute("aria-label", button.title);
+        button.setAttribute("aria-pressed", String(selected === day));
+        button.addEventListener("click", () => {
+          if (busy || editorOpen || !ready || button.disabled) return;
+          selected = day;
+          for (const other of dayButtons) other.setAttribute("aria-pressed", "false");
+          button.setAttribute("aria-pressed", "true");
+          renderActions();
+        });
+        dayButtons.push(button);
+      }
+      renderActions();
+    }
+    function renderTemplates() {
+      templatesView.replaceChildren();
+      node("h3", "Schedule templates", templatesView);
+      action("Create New Template", templatesView, () => editTemplate());
+      if (!templates.length) node("p", "No templates yet. Create one or save a selected week as a template.", templatesView);
+      const list = node("ul", "", templatesView);
+      for (const template of templates) {
+        const item = node("li", "", list);
+        node("strong", template.name, item);
+        node("span", ` · ${template.shift_count} shifts`, item);
+        action("Edit Template", item, () => editTemplate(template));
+        action("Archive template", item, () => archiveTemplate(template));
+      }
+    }
+    async function load(keep = selected) {
       shifts.reset();
       templateEditor.reset();
       ready = false;
-      selected = "";
-      create.disabled = true;
-      calendar.replaceChildren();
-      list.replaceChildren();
-      templatesView.replaceChildren();
-      say("Loading schedule calendar…");
+      renderActions();
       renderNavigation();
-
+      say("Loading schedule calendar…");
       const {first, last} = boundaries();
-      const rangeStart = addDays(first, -6) < "2000-01-01"
-        ? "2000-01-01" : addDays(first, -6);
-      const rangeEnd = addDays(last, 6) > "9998-12-31"
-        ? "9998-12-31" : addDays(last, 6);
-      const [scheduleState, templates] = await Promise.all([
-        request(url() + "?start=" + rangeStart + "&end=" + rangeEnd),
-        request(templateUrl())
+      const start = addDays(first, -6) < "2000-01-01" ? "2000-01-01" : addDays(first, -6);
+      const end = addDays(last, 6) > "9998-12-31" ? "9998-12-31" : addDays(last, 6);
+      [state, templates] = await Promise.all([
+        request(weeksUrl() + "?start=" + start + "&end=" + end), request(templatesUrl())
       ]);
-      state = scheduleState;
-      renderTemplates(templates);
-
-      policy.textContent = `Weeks begin ${names[state.location.week_start_day]}. Times use ${state.location.timezone}. Dates with an existing schedule cannot be selected.`;
+      selected = keep >= first && keep <= last ? keep : "";
+      policy.textContent = `Weeks begin ${names[state.location.week_start_day]}. Times use ${state.location.timezone}. Select an existing or unused week.`;
       ready = true;
+      renderTemplates();
       renderCalendar();
-      updateCopyMode();
-
-      const visible = state.weeks.filter(week =>
-        week.week_start_date <= last && addDays(week.week_start_date, 6) >= first
-      );
-      node("h3", "Schedule weeks", list);
-      if (!visible.length) {
-        node("p", "No schedule weeks overlap this month.", list);
-      } else {
-        const entries = node("ul", "", list);
-        for (const week of visible) {
-          const item = node("li", "", entries);
-          node("strong", `${week.week_start_date} – ${addDays(week.week_start_date, 6)}`, item);
-          node("span", ` · ${week.state.charAt(0).toUpperCase() + week.state.slice(1)}`, item);
-          action("Save as template", item, () => saveAsTemplate(week));
-          action("Open week", item, () => {
-            if (!busy) shifts.open(select.value, week.id);
-          });
-          action("Copy this week", item, () => {
-            if (busy || !ready) return;
-            copySource = {...week};
-            renderCalendar();
-            updateCopyMode();
-            say("Choose an available destination date, then click Copy week.");
-            fields.scrollIntoView({block: "start", behavior: "smooth"});
-          });
-        }
-      }
-      say("Choose an available week-start date.");
+      say("Select a week and choose an action.");
     }
 
-    action("Refresh calendar", controls, () => task(load));
+    function createBlank() {
+      if (!validSelection() || selectedWeek() || busy) return;
+      const day = selected;
+      task(async () => {
+        await request(weeksUrl(), mutation({week_start_date: day, expected_location_revision: state.location.revision}));
+        copySource = null;
+        await load(day);
+        say("Blank draft created. Choose Open week to add shifts.");
+      });
+    }
+    function openWeek() {
+      const week = selectedWeek();
+      if (!busy && ready && week) shifts.open(select.value, week.id);
+    }
+    async function saveTemplate() {
+      const week = selectedWeek();
+      if (!ready || busy || !week) return;
+      const name = await askTemplateName(panel, week);
+      if (name === null || !active()) return;
+      task(async () => {
+        await request(weeksUrl() + "/" + encodeURIComponent(week.id) + "/templates",
+          mutation({name, expected_source_revision: week.revision}));
+        await load(week.week_start_date);
+        say(`Saved template: ${name}.`);
+      });
+    }
+    function copyWeek() {
+      if (!validSelection() || busy) return;
+      if (!copySource) {
+        const week = selectedWeek();
+        if (!week) return;
+        copySource = {...week};
+        selected = "";
+        renderCalendar();
+        say("Select an unused destination week, then choose Copy week here.");
+        return;
+      }
+      if (covered(selected)) return;
+      const day = selected, source = {...copySource};
+      if (!window.confirm(`Copy week ${source.week_start_date} to ${day}? The source stays unchanged.`)) return;
+      task(async () => {
+        await request(weeksUrl() + "/" + encodeURIComponent(source.id) + "/copy", mutation({
+          week_start_date: day, expected_source_revision: source.revision,
+          expected_location_revision: state.location.revision
+        }));
+        copySource = null;
+        await load(day);
+        say("Week copied into an independent draft.");
+      });
+    }
+    function deleteWeek() {
+      const week = selectedWeek();
+      if (busy || !ready || week?.state !== "draft") return;
+      if (!window.confirm(`Delete the whole draft week ${week.week_start_date} – ${addDays(week.week_start_date, 6)} and all its shifts?\nSaved templates stay unchanged. This date will become available for a fresh week.`)) return;
+      task(async () => {
+        await request(weeksUrl() + "/" + encodeURIComponent(week.id) + "/remove",
+          mutation({expected_week_revision: week.revision}));
+        copySource = null;
+        await load(week.week_start_date);
+        say("Week deleted. Create a blank week or apply a template to start fresh.");
+      });
+    }
+    async function applyTemplate() {
+      const week = selectedWeek();
+      if (busy || !validSelection() || !templates.length || (week && week.state !== "draft")) return;
+      const day = selected;
+      const choice = await askTemplateApplication(panel, templates, day, week, abort.signal);
+      if (!choice || !active()) return;
+      if (week && choice.mode === "replace" && !window.confirm(
+        `Replace ALL shifts in week ${day} with template "${choice.template.name}"?`
+      )) return;
+      task(async () => {
+        await request(templatesUrl() + "/" + encodeURIComponent(choice.template.id) + "/apply", mutation({
+          week_start_date: day, mode: choice.mode,
+          expected_template_revision: choice.template.revision,
+          expected_location_revision: state.location.revision,
+          ...(week ? {week_id: week.id, expected_week_revision: week.revision} : {})
+        }));
+        copySource = null;
+        await load(day);
+        say(choice.mode === "replace" ? "Template applied. Previous shifts were replaced." : "Template shifts appended.");
+      });
+    }
+    function editTemplate(template = null) {
+      if (busy || !ready) return;
+      copySource = null;
+      renderActions();
+      shifts.reset();
+      templateEditor.open({locationId: select.value, locationRevision: state.location.revision,
+        rolloverMinute: state.location.business_day_start_minute, templateId: template?.id ?? null});
+    }
+    function archiveTemplate(template) {
+      if (busy || !ready || !window.confirm(`Archive "${template.name}"? Existing weeks stay unchanged.`)) return;
+      task(async () => {
+        await request(templatesUrl() + "/" + encodeURIComponent(template.id), mutation({
+          name: template.name, active: false, expected_template_revision: template.revision
+        }, "PATCH"));
+        await load(selected);
+        say("Template archived.");
+      });
+    }
+
+    action("Refresh calendar", controls, () => task(() => load(selected)));
     select.addEventListener("change", () => {
       copySource = null;
-      updateCopyMode();
-      task(load);
+      task(() => load(""));
     });
-
-    form.addEventListener("submit", event => {
-      event.preventDefault();
-      if (busy || !validSelection()) return;
-      const chosen = selected;
-      const selectedSource = copySource ? {...copySource} : null;
-      const isTemplate = selectedSource?.kind === "template";
-      const description = isTemplate ? `template "${selectedSource.name}"` :
-        selectedSource ? `week ${selectedSource.week_start_date} – ` +
-          addDays(selectedSource.week_start_date, 6) : "";
-      if (selectedSource && !window.confirm(
-        `Create ${chosen} – ${addDays(chosen, 6)} from ${description}?\n` +
-        "This creates a new draft with unassigned shifts. The source stays unchanged."
-      )) return;
-
-      const payload = {
-        week_start_date: chosen,
-        expected_location_revision: state.location.revision,
-        ...(isTemplate ? {expected_template_revision: selectedSource.revision} :
-          selectedSource ? {expected_source_revision: selectedSource.revision} : {})
-      };
-      const destination = isTemplate
-        ? templateUrl() + "/" + encodeURIComponent(selectedSource.id) + "/apply"
-        : url() + (selectedSource
-          ? "/" + encodeURIComponent(selectedSource.id) + "/copy" : "");
-
-      task(async () => {
-        try {
-          const result = await request(destination, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "X-CSRF-Token": identity.csrf_token
-            },
-            body: JSON.stringify(payload)
-          });
-          const created = result.week ?? result;
-          copySource = null;
-          await load();
-          say(`Created draft week ${created.week_start_date} – ` +
-            `${addDays(created.week_start_date, 6)}${isTemplate ? " from template" : ""}.`);
-        } catch (error) {
-          if (error.status === 409) {
-            copySource = null;
-            await load();
-            say("The source, destination or workplace settings changed. " +
-              "The calendar was refreshed. Choose the source and destination again.");
-            return;
-          }
-          throw error;
-        }
-      });
-    });
-
-    controls.disabled = fields.disabled = true;
+    updateLocks();
+    renderActions();
     await task(async () => {
       const locations = await request("/api/v1/staff/locations");
       if (!locations.length) {
-        controls.hidden = form.hidden = true;
+        controls.hidden = picker.hidden = actions.hidden = true;
         say("No workplaces are available for scheduling.");
         return;
       }
       for (const location of locations) {
-        const option = node("option",
-          `${location.organization_name} / ${location.name}`, select);
-        option.value = location.id;
+        node("option", `${location.organization_name} / ${location.name}`, select).value = location.id;
       }
-      await load();
+      await load("");
     });
   }
   return {start, reset};

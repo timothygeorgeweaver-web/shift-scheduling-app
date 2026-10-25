@@ -188,3 +188,22 @@ business-day placement, CSRF, stale/concurrent requests, non-draft denial
 and complete rollback following a final audit failure.
 
 The combined selected-week browser controls and mode dialog remain pending.
+
+## Combined selected-week browser controls
+
+The calendar now selects existing and unused week-start dates. A single action
+panel below it provides Create blank week, Open week, Save as Template,
+Copy this week, Delete week and Apply Template with state-dependent availability.
+
+Copying selects a source first, then an unused destination date.
+Apply Template chooses a saved pattern and Append/Replace mode. Replacing an
+existing week's shifts requires explicit confirmation. Deletion also confirms
+the whole week and preserves independent saved templates.
+
+The separate Schedule weeks list is removed. Closing the scheduled-shift editor
+refreshes the listing revision before subsequent selected-week actions.
+Month controls are constrained to the calendar area.
+
+Local JavaScript syntax and simulated action-flow checks cover button states,
+creation/deletion, copying, Append/Replace payloads, editor-close refresh and
+dialog cleanup. Asset serving passes. Owner browser acceptance remains pending.

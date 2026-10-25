@@ -503,3 +503,28 @@ dialog.shift-popup {
   font-size: 10px;
   line-height: 1.2;
 }
+
+.schedules .schedule-calendar {
+  width: min(100%, 720px);
+  box-sizing: border-box;
+}
+.schedules .schedule-calendar .planner-navigation {
+  width: 100%;
+  gap: 10px;
+}
+.schedule-calendar .planner-navigation h3 { flex: 1; }
+.schedule-calendar .planner-navigation .button {
+  min-width: 0;
+  padding: 8px 10px;
+  font-size: 12px;
+}
+.selected-week-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.selected-week-buttons .button { margin: 0; }
+.selected-week-buttons .button:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
