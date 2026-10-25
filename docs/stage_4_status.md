@@ -613,3 +613,29 @@ the later assignment integration certification.
 
 Runtime assignment creation remains disabled.
 Recovery inventory includes twenty tables and thirty-six migrations.
+
+## Protected application assignment commits
+
+Added a CSRF-protected staff assignment endpoint. HTTP requests contain
+employee, expected revisions, replacement confirmation and per-rule reasons;
+client eligibility decisions are rejected.
+
+The trusted application server locks current inputs, evaluates eligibility
+using saved policy, validates hard blocks and exact warning approvals, and
+commits assignment, private approvals, revisions and audit history in one
+read-committed transaction.
+
+A database bridge rechecks authorization, revisions and the evaluated input
+fingerprint before invoking the owner-only recorder. The fingerprint detects
+changed inputs; it is not a signature proving rule correctness. The application
+service is trusted to compute eligibility, while PUBLIC and direct runtime
+recorder/table access remain denied.
+
+Focused disposable HTTP checks cover eligible saves, stale requests, fresh
+overlap rejection, required warning reasons, approval persistence, CSRF/origin
+and staff authorization, and full rollback on final audit failure.
+
+No source employee assignments are created by certification.
+Browser assignment controls, explicit unassignment, assigned shift editing,
+affected-assignment review and mixed-policy reconciliation remain pending.
+Recovery inventory includes twenty tables and thirty-seven migrations.
