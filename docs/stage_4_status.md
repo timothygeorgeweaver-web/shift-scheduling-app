@@ -556,3 +556,19 @@ policy revisions are rejected. No assignments or audit events are created.
 Protected assignment persistence, per-rule approvals, affected-assignment
 review and browser assignment controls remain pending.
 Recovery inventory includes twenty tables and thirty-four migrations.
+
+## Assignment save request validation
+
+Added strict assignment request models and validation over freshly locked
+eligibility inputs. Save requests identify the expected week, shift, location
+policy and current assignment revisions.
+
+Hard blocks cannot be overridden. Soft-rule approvals must match the exact
+current warning set, with one nonblank reason per rule. Replacing another
+employee requires explicit confirmation and the current assignment identity
+and revision. Unexpected new assignees are stale conflicts.
+
+The validator is pure and performs no writes. It must be called after actor
+authorization, transaction locking and fresh eligibility evaluation.
+Atomic assignment/approval/audit persistence and mutation integration remain
+pending; no assignment save endpoint is enabled by this change.
