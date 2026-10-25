@@ -252,3 +252,40 @@ qualification after review and rejects a newly unqualified assignment without
 publication writes. Two competing publication requests must produce one
 successful publication and one stale-request rejection, retaining exactly
 one publication version and one private availability snapshot set.
+
+## Verified Stage 5 closure
+
+Status: COMPLETE.
+
+Verified implementation commit:
+`e716920f46671c2169238a526c7fa5cb84af1e59`.
+
+Acceptance evidence:
+
+- Full regression: 537 tests passed.
+- Owner browser acceptance: passed.
+- Fresh publication eligibility after review: passed.
+- Competing publication requests: exactly one successful publication.
+- Immutable publication history and working amendment isolation: passed.
+- Employee full-team roster privacy and authorization: passed.
+- Exact publication availability locks and private snapshots: passed.
+- Publication failure rollback and audit atomicity: passed.
+- Independent recovery restore: passed.
+- Restored data, schema, privileges, row security and execution grants: passed.
+- Migration checksums and code bundle integrity: passed.
+- Source database remained unchanged during recovery verification.
+
+Recovery checkpoint:
+`/home/timothygeorgeweaver/shift-scheduling-evidence/checkpoints/20261025T231519262883Z`.
+
+Recovery database:
+`shift_scheduling_restore_20261025t231519262883z`.
+
+The recovery database defaults to read-only. The checkpoint covers the
+verified implementation commit above; this closure commit adds documentation.
+
+Publication supports explicit confirmation of Unfilled shifts. Working
+amendments remain separate from the official employee roster until
+republication. Prior published versions remain immutable.
+
+Stage 6 operational readiness and pilot preparation are next.
