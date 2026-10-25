@@ -97,3 +97,6 @@ app.include_router(assigned_shift_router)
 
 from app.publication_routes import router as publication_router
 app.include_router(publication_router)
+
+from app.published_schedule_routes import router as published_schedule_router
+app.include_router(published_schedule_router)

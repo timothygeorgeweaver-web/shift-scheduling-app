@@ -176,3 +176,27 @@ republication, preserved history and employee-only denial.
 No real week is published by installation. Employee roster delivery and
 browser publication controls remain pending.
 Recovery inventory: 23 tables and 51 reviewed migrations.
+
+## Employee official roster access and staff history
+
+Active linked employees can list published weeks for their own location and
+read each week's latest official full-team roster. Unpublished working weeks
+and staged amendments are excluded. Republishing switches subsequent reads
+to the new immutable version.
+
+Employee projection explicitly whitelists snapshot fields again at the database
+read boundary. Private availability, approval details, internal notes and staff
+publication actor metadata are excluded. Responses use Cache-Control no-store.
+
+Staff can list publication history and retrieve a specific immutable roster
+version. Employee-only accounts cannot access these staff history routes.
+Invalid/revoked sessions, inactive employee profiles and unrelated locations
+are denied.
+
+Focused HTTP certification uses a separate employee-only account and covers
+team visibility, draft/amendment isolation, republishing, prior-version
+reconstruction, privacy and access revocation. It also reruns atomic publication
+and final-audit rollback checks.
+
+Browser employee roster and publication controls remain pending.
+Recovery inventory: 23 tables and 52 reviewed migrations.
