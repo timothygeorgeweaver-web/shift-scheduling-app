@@ -478,3 +478,22 @@ shift's saved business-day policy.
 
 Focused tests cover hard rules, soft warnings, frozen precedence, adjacent
 week rest, combined hours, privacy projection and fresh repeated reads.
+
+## Persistent rest policy foundation
+
+Location storage now includes quarter-hour rest window endpoints and required
+rest minutes. Defaults are 20:00 through 06:00 inclusive and 720 elapsed
+minutes of rest. Required rest supports 0 through 1440 minutes.
+
+The authorized candidate reader returns the current rest policy and shared
+location revision with its other fresh inputs. No direct runtime policy
+write grants or administrator editing endpoint are introduced here.
+
+Focused disposable checks cover default projection, valid policy storage,
+invalid ranges, quarter-hour and null constraints, authorization, assignment
+storage protection and rollback. Source shifts and assignments remain
+unchanged. Recovery inventory includes twenty tables and thirty-two
+migrations.
+
+Administrator policy editing, policy-change review of existing assignments,
+and protected assignment commits remain pending.
