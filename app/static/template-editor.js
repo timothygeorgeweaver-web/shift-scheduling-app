@@ -1,5 +1,5 @@
 import {node, action, addDays, weekday} from "/static/planner-grid.js?v=2";
-import {createScheduleGrid, clockMinute} from "/static/schedule-grid.js?v=5";
+import {createScheduleGrid, clockMinute} from "/static/schedule-grid.js?v=6";
 
 const names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 const anchor = "2000-01-03";

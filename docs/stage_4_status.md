@@ -85,3 +85,19 @@ tests cover rollover, DST and elapsed-time rules.
 
 New-week rollover capture remains staged until the schedule grid can display
 these boundaries. Template and unavailability integration remain pending.
+
+## Schedule grid business-day display support
+
+The shared schedule grid now reads the saved week rollover, orders its 96
+local-clock rows from that time, groups early-morning starts under the prior
+business date, and marks those rows as Next day.
+
+The scheduled-shift editor selects a business day, displays the resulting actual
+calendar start date, and submits the actual date to the API. Its next-day flag
+continues to mean the calendar day after the actual start date.
+Coverage counts use the saved business-day grouping.
+
+Existing midnight-based weeks retain their existing grouping. Generic templates
+continue using midnight until template rollover metadata is connected.
+New-week rollover capture and employee unavailability integration remain pending.
+Browser acceptance of the activated rollover is still required.

@@ -1,5 +1,7 @@
 import {node, action, addDays, weekday} from "/static/planner-grid.js?v=2";
 
+import {businessDateForLocal, calendarDateForCell, rolloverMinute} from "/static/business-day.js?v=1";
+
 const names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
 export function clockMinute(minute) {
@@ -23,14 +25,15 @@ export function compareShifts(a, b, roles) {
 }
 
 export function createScheduleGrid(parent, data, roles, choose, scrollTop = 1408, openShift = () => {}, {genericWeek = false} = {}) {
+  const rollover = rolloverMinute(data.week.business_day_start_minute ?? 0);
   const roleMap = new Map(roles.map(role => [role.id, role]));
   const grouped = new Map();
 
   for (const shift of data.slots) {
     const start = shift.local_start;
     const minute = Number(start.slice(11, 13)) * 60 + Number(start.slice(14, 16));
-    const cell = Math.floor(minute / 15);
-    const key = `${start.slice(0, 10)}/${cell}`;
+    const cell = Math.floor(((minute - rollover + 1440) % 1440) / 15);
+    const key = `${businessDateForLocal(start, rollover)}/${cell}`;
     if (!grouped.has(key)) grouped.set(key, []);
     grouped.get(key).push(shift);
   }
@@ -54,8 +57,11 @@ export function createScheduleGrid(parent, data, roles, choose, scrollTop = 1408
   }
 
   for (let cell = 0; cell < 96; cell++) {
-    const time = clockMinute(cell * 15);
+    const minute = (rollover + cell * 15) % 1440;
+    const time = clockMinute(minute);
+    const nextCalendarDay = minute < rollover;
     const label = node("div", time, grid);
+    if (nextCalendarDay) node("small", "Next day", label);
     label.className = "schedule-grid-time";
     for (let offset = 0; offset < 7; offset++) {
       const day = addDays(data.week.week_start_date, offset);
@@ -80,11 +86,11 @@ export function createScheduleGrid(parent, data, roles, choose, scrollTop = 1408
       }
       if (data.week.state === "draft") {
         const add = action("+ Add shift", box, () => {
-          choose(day, cell * 15, scroll.scrollTop, add);
+          choose(calendarDateForCell(day, minute, rollover), minute, scroll.scrollTop, add);
         });
         add.className = "schedule-cell-add";
         add.setAttribute("aria-label",
-          `Add shift starting ${genericWeek ? names[weekday(day)] : day} at ${time}`);
+          `Add shift starting ${genericWeek ? names[weekday(day)] : day} at ${time}${nextCalendarDay ? ", next calendar day" : ""}`);
       }
     }
   }

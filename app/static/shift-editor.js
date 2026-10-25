@@ -1,5 +1,6 @@
 import {node, action, addDays, weekday} from "/static/planner-grid.js?v=2";
-import {createScheduleGrid, clockMinute} from "/static/schedule-grid.js?v=5";
+import {createScheduleGrid, clockMinute} from "/static/schedule-grid.js?v=6";
+import {businessDateForLocal, calendarDateForCell} from "/static/business-day.js?v=1";
 
 export function createShiftEditor({api, expired, identity, parent, onOpen}) {
   const root = node("section", "", parent);
@@ -170,7 +171,9 @@ export function createShiftEditor({api, expired, identity, parent, onOpen}) {
     const label = node("label", text, parent);
     const select = node("select", "", label);
     select.required = true;
-    for (let minute = 0; minute < 1440; minute += 15) {
+    const rollover = data.week.business_day_start_minute;
+    for (let cell = 0; cell < 96; cell++) {
+      const minute = (rollover + cell * 15) % 1440;
       const time = clockMinute(minute);
       node("option", time, select).value = time;
     }
@@ -205,9 +208,9 @@ export function createShiftEditor({api, expired, identity, parent, onOpen}) {
 
   function renderCoverage() {
     const details = node("details", "", content);
-    node("summary", "Shift counts by starting day and job type", details);
+    node("summary", "Shift counts by starting business day and job type", details);
     node("p",
-      "Counts include overnight shifts on their starting date. " +
+      "Counts use the business day on which each shift starts. " +
       "These are coverage slots; employee assignments come in the next stage.",
       details);
     const table = node("table", "", details);
@@ -234,7 +237,7 @@ export function createShiftEditor({api, expired, identity, parent, onOpen}) {
       node("th", slots[0].role_name, row).scope = "row";
       for (const day of days) {
         node("td", String(slots.filter(slot =>
-          slot.local_start.slice(0, 10) === day).length), row);
+          businessDateForLocal(slot.local_start, data.week.business_day_start_minute) === day).length), row);
       }
       node("td", String(slots.length), row);
     }
@@ -242,7 +245,7 @@ export function createShiftEditor({api, expired, identity, parent, onOpen}) {
     node("th", "Total shifts", total).scope = "row";
     for (const day of days) {
       node("td", String(data.slots.filter(slot =>
-        slot.local_start.slice(0, 10) === day).length), total);
+        businessDateForLocal(slot.local_start, data.week.business_day_start_minute) === day).length), total);
     }
     node("td", String(data.slots.length), total);
   }
@@ -258,6 +261,11 @@ export function createShiftEditor({api, expired, identity, parent, onOpen}) {
       `${data.slots.length} unassigned shifts · ${hours(data.slots.reduce(
         (sum, slot) => sum + slot.estimated_work_minutes, 0
       ))} estimated coverage`, content);
+
+    const rollover = week.business_day_start_minute;
+    node("p", `Business days run from ${clockMinute(rollover)} to ` +
+      `${clockMinute(rollover)} the following calendar day. ` +
+      "Early-morning rows marked Next day belong to the column above.", content);
 
     renderCoverage();
 
@@ -333,14 +341,16 @@ export function createShiftEditor({api, expired, identity, parent, onOpen}) {
       roleSelect.value = editing.role_id;
     }
 
-    const dayLabel = node("label", "Start date", layout);
+    const dayLabel = node("label", "Starting business day", layout);
     const daySelect = node("select", "", dayLabel);
     daySelect.required = true;
     for (let offset = 0; offset < 7; offset++) {
       const day = addDays(week.week_start_date, offset);
       node("option", `${names[weekday(day)]} ${day}`, daySelect).value = day;
     }
-    daySelect.value = selectedStart.day;
+    daySelect.value = businessDateForLocal(
+      `${selectedStart.day}T${clockMinute(selectedStart.minute)}:00`, rollover
+    );
     const start = field("Start time (24-hour HH:MM)", "time", layout, clockMinute(selectedStart.minute));
     const defaultEnd = editing
       ? Number(editing.local_end.slice(11, 13)) * 60 +
@@ -348,13 +358,25 @@ export function createShiftEditor({api, expired, identity, parent, onOpen}) {
       : (selectedStart.minute + 60) % 1440;
     const end = field("End time (24-hour HH:MM)", "time", layout, clockMinute(defaultEnd));
 
-    const nextLabel = node("label", "Ends next day", inputFields);
+    const calendarNotice = node("p", "", inputFields);
+    const updateCalendarNotice = () => {
+      if (!start.value || !daySelect.value) return;
+      const minute = Number(start.value.slice(0, 2)) * 60 +
+        Number(start.value.slice(3));
+      const actualDay = calendarDateForCell(daySelect.value, minute, rollover);
+      calendarNotice.textContent = `Actual start: ${actualDay} at ${start.value}.`;
+    };
+    start.addEventListener("change", updateCalendarNotice);
+    daySelect.addEventListener("change", updateCalendarNotice);
+    updateCalendarNotice();
+
+    const nextLabel = node("label", "Ends next calendar day", inputFields);
     const next = node("input", "", nextLabel);
     next.type = "checkbox";
     next.checked = editing
       ? editing.local_end.slice(0, 10) !== editing.local_start.slice(0, 10)
       : selectedStart.minute + 60 >= 1440;
-    node("p", "For a midnight finish, choose 00:00 and select Ends next day.", inputFields);
+    node("p", "Ends next calendar day means the date after the actual start date shown above.", inputFields);
     const noteLabel = node("label", "Shift note (optional)", inputFields);
     const note = node("textarea", "", noteLabel);
     note.maxLength = 500;
@@ -427,7 +449,7 @@ export function createShiftEditor({api, expired, identity, parent, onOpen}) {
       }
       const body = {
         role_id: roleSelect.value,
-        local_date: daySelect.value,
+        local_date: calendarDateForCell(daySelect.value, startMinute, rollover),
         start_minute: startMinute,
         end_minute: endMinute,
         ends_next_day: next.checked,
