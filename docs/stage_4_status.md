@@ -779,3 +779,24 @@ mixed-policy flags, stable batches and preservation of input records.
 
 Persistent review records, policy-change integration and review display
 remain pending. This change performs no database writes.
+
+## Persistent assignment recheck markers
+
+Added private immutable assignment-review history. Dependency changes queue
+pending rechecks for affected live draft assignments: effective availability,
+qualifications, employee/role active state, rest policy and neighboring
+assignment changes.
+
+Availability markers use the actual calendar dates touched by a shift.
+Existing assignments and immutable approvals remain intact. Review markers
+share the dependency mutation transaction, so failed changes cannot leave
+orphaned review events.
+
+Focused disposable checks cover qualification, employee status, rest-policy
+and availability markers, preserved assignment values, rollback, immutable
+history and runtime table access denial. Further end-to-end integration
+will cover the remaining trigger paths.
+
+No source assignments or policies are modified by certification.
+Review evaluation persistence and display are next.
+Recovery inventory includes twenty-one tables and forty migrations.

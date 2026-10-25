@@ -41,7 +41,8 @@ def install(version, database, rehearse=False):
         "0036_assignment_shift_lifecycle",
         "0037_assignment_commit_bridge",
         "0038_assignment_reads_and_unassign",
-        "0039_clear_week_assignments"
+        "0039_clear_week_assignments",
+        "0040_assignment_review_events"
     ), "Unsupported migration.")
     require(
         database == "shift_scheduling"
@@ -116,6 +117,7 @@ def install(version, database, rehearse=False):
         "0037_assignment_commit_bridge": (set(), []),
         "0038_assignment_reads_and_unassign": (set(), []),
         "0039_clear_week_assignments": (set(), []),
+        "0040_assignment_review_events": (set(), []),
         "0032_assignment_rest_policy": ({"location"}, [
             "rest_window_start_minute", "rest_window_end_minute",
             "minimum_rest_minutes",
@@ -181,6 +183,11 @@ def install(version, database, rehearse=False):
                 "Unexpected assignment tables.")
         require(all(after["data"][name]["rows"] == 0 for name in names),
                 "Migration seeded employee assignments.")
+    if version == "0040_assignment_review_events":
+        require(set(after["data"])-set(before["data"]) == {"assignment_review_event"},
+                "Unexpected assignment review tables.")
+        require(after["data"]["assignment_review_event"]["rows"] == 0,
+                "Migration unexpectedly seeded review history.")
     for table, value in before["data"].items():
         if table not in stripped | {"schema_migration"}:
             require(after["data"][table] == value,
@@ -195,6 +202,8 @@ def install(version, database, rehearse=False):
         require(actual == expected, "Existing records changed during migration.")
 
     signature = {
+        "0040_assignment_review_events":
+            "scheduling.lock_assignment_scope(uuid,uuid,integer,integer,integer)",
         "0039_clear_week_assignments":
             "scheduling.clear_draft_week_assignments(uuid,uuid,integer,integer)",
         "0038_assignment_reads_and_unassign":
