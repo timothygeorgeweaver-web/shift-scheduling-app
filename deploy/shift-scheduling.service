@@ -1,0 +1,21 @@
+[Unit]
+Description=Shift Scheduling App
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=simple
+WorkingDirectory=%h/shift-scheduling-app
+ExecStart="%h/shift-scheduling-app/.venv/bin/python" -m uvicorn app.main:app --host 127.0.0.1 --port 8010 --no-access-log
+Restart=always
+RestartSec=3
+TimeoutStopSec=20
+KillSignal=SIGTERM
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target

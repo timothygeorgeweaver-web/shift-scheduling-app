@@ -57,3 +57,13 @@ to exist.
 
 No database migration, real publication, external notification, or hosted
 deployment is performed by this opening block.
+
+## Local process supervision
+
+Installed a dedicated user service on loopback port 8010.
+Verified initial database readiness and automatic restart to a new ready
+process following forced process termination.
+
+The service is enabled for the user session. Linux environment availability,
+hosted deployment, encrypted routine backups, and pilot sign-off remain open.
+See runtime_service.md for operating commands.
