@@ -84,3 +84,21 @@ Focused certification covers current/stale approvals, changed qualifications,
 privacy, CSRF/origin, revision and role guards, and two-connection serialization.
 Publication commit, availability freezing and employee roster delivery are next.
 Recovery inventory: 22 tables and 48 reviewed migrations.
+
+## Exact business-week availability lock plan
+
+Publication locks must cover the saved business-week interval, rather than
+freezing all eight touched calendar dates in their entirety.
+
+At a 05:00 rollover, the first calendar date is locked from 05:00 onward,
+the six middle dates are fully locked, and the final calendar date is locked
+only before 05:00. Adjacent business-week hours remain outside that publication
+lock, subject to their independent cutoff or other existing locks.
+
+Added a pure plan containing exact calendar minute windows and UTC boundaries.
+It covers all 672 local quarter-hour cells while retaining 167/168/169-hour
+elapsed weeks across DST. Missing or repeated rollover boundaries fail closed.
+
+Partial-date persistence, changed-cell enforcement, planner lock indicators
+and atomic publication integration remain pending. No live lock is created
+by this helper.
