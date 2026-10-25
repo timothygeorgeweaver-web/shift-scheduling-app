@@ -240,3 +240,15 @@ there is no polling.
 
 Focused metadata and asset checks passed. End-to-end owner browser acceptance
 remains pending. Recovery inventory: 23 tables and 53 reviewed migrations.
+
+## Browser acceptance and publication integration
+
+Owner browser acceptance passed for publication review, explicit Unfilled
+confirmation, official employee rosters, working amendment isolation,
+republication history, and publication availability locks.
+
+Focused disposable-database integration verifies that publication rechecks
+qualification after review and rejects a newly unqualified assignment without
+publication writes. Two competing publication requests must produce one
+successful publication and one stale-request rejection, retaining exactly
+one publication version and one private availability snapshot set.
