@@ -1,6 +1,6 @@
 """Staff-only schedule detail and role-specific draft shift creation."""
 
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -8,6 +8,7 @@ import psycopg
 from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictInt
 
 from app.auth_routes import _token
+from app.business_day import business_date
 from app.schedule_week_routes import authorized_location
 from app.shift_timing import calculate_shift_timing
 from app.staff_data import staff_connection
@@ -76,7 +77,11 @@ def create_shift(
             data = read_week(conn, location_id, week_id)
             week = data["week"]
             first = date.fromisoformat(week["week_start_date"])
-            if not first <= body.local_date <= first+timedelta(days=6):
+            start_local = datetime.combine(body.local_date, datetime.min.time()) + timedelta(minutes=body.start_minute)
+            start_day = business_date(
+                start_local, week["business_day_start_minute"],
+            )
+            if not first <= start_day <= first+timedelta(days=6):
                 raise HTTPException(
                     status_code=422,
                     detail="The shift must start within this schedule week.",
@@ -121,7 +126,11 @@ def edit_shift(
             data = read_week(conn, location_id, week_id)
             week = data["week"]
             first = date.fromisoformat(week["week_start_date"])
-            if not first <= body.local_date <= first+timedelta(days=6):
+            start_local = datetime.combine(body.local_date, datetime.min.time()) + timedelta(minutes=body.start_minute)
+            start_day = business_date(
+                start_local, week["business_day_start_minute"],
+            )
+            if not first <= start_day <= first+timedelta(days=6):
                 raise HTTPException(
                     status_code=422,
                     detail="The shift must start within this schedule week.",

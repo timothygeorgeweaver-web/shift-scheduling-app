@@ -69,3 +69,19 @@ No source location policy is changed by installation.
 
 The API is staged configuration. New-week/template capture, planner activation,
 DST boundary integration and the administrator browser control remain pending.
+
+## Saved business-week shift boundaries
+
+Migration 0024 upgrades shift creation/editing to validate the start's business
+date using the week's saved rollover. HTTP validation matches database checks.
+
+For a 05:00 Monday week, the following Monday before 05:00 is included and the
+first Monday before 05:00 is excluded. Actual calendar timestamps are retained.
+Midnight-based saved weeks retain their existing behavior.
+
+Focused disposable-database checks cover create/edit boundaries, direct SQL
+denial, unchanged timestamps and midnight compatibility. Targeted pure timing
+tests cover rollover, DST and elapsed-time rules.
+
+New-week rollover capture remains staged until the schedule grid can display
+these boundaries. Template and unavailability integration remain pending.
