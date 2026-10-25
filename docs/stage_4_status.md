@@ -279,3 +279,23 @@ audit failure on the eighth date after the first batch has written.
 No new employee-table permissions are granted. Existing browser routes and
 display are unchanged. Business-day browser and mass-edit integration remain
 pending.
+
+## Main unavailability business-day display and saves
+
+The main employee planner now uses the eight-date business-planner API.
+It projects seven business-day columns from actual calendar-date records and
+orders rows from the location rollover, with Next Day beneath early times.
+
+Each cell retains its actual calendar date and lock state. Mixed columns show
+Partially locked. Non-quarter-hour frozen intervals remain exact and read-only;
+the view marks intersecting cells without rounding the stored snapshot.
+
+Only changed editable cells are merged into calendar-date save requests.
+Hidden boundary cells and unchanged locked cells are preserved.
+
+Local syntax and simulated checks cover projection, hidden edges, mixed locks,
+exact frozen interval labels, locked-cell denial and editable-cell toggles.
+Asset serving passes.
+
+The mass editor still uses its original calendar-day API/layout pending the
+next integration block. Browser acceptance will cover both planners together.

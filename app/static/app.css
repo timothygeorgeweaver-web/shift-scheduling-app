@@ -534,3 +534,10 @@ dialog.shift-popup {
   font-size: 13px;
   color: var(--muted);
 }
+
+.planner-table tbody th small {
+  display: block;
+  margin-top: 2px;
+  font-size: 9px;
+  line-height: 1.1;
+}

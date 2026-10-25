@@ -42,7 +42,9 @@ export function clock(minute) {
   return `${Math.floor(minute / 60).toString().padStart(2, "0")}:${(minute % 60).toString().padStart(2, "0")}`;
 }
 
-export function createPlannerGrid(parent, days, changed, initialScroll = 0, {genericWeek = false} = {}) {
+export function createPlannerGrid(parent, days, changed, initialScroll = 0, {genericWeek = false, rolloverMinute = 0} = {}) {
+  if (!Number.isInteger(rolloverMinute) || rolloverMinute < 0 ||
+      rolloverMinute >= 1440 || rolloverMinute % 15) throw new Error("Invalid rollover.");
   const scroll = node("div", "", parent);
   scroll.className = "planner-scroll";
   scroll.tabIndex = -1;
@@ -64,7 +66,9 @@ export function createPlannerGrid(parent, days, changed, initialScroll = 0, {gen
     node("strong", names[weekday(day.date)], cell);
     if (!genericWeek) {
       node("span", day.date, cell);
-      node("small", day.editable ? "Editable" : "Locked", cell);
+      node("small", day.editable
+        ? (day.cell_states?.some(state => !state.editable) ? "Partially locked" : "Editable")
+        : "Locked", cell);
     }
     if (day.effective_cells === null) {
       node("small", "Exact locked times: " + day.blocked.map(
@@ -73,6 +77,17 @@ export function createPlannerGrid(parent, days, changed, initialScroll = 0, {gen
     }
   });
 
+  for (let index = 0; index < days.length; index++) {
+    if (days[index].exact_locked_times?.length) {
+      node("small", "Exact locked times: " + days[index].exact_locked_times.join(", "),
+        header.children[index + 1]);
+    }
+  }
+  function isEditable(dayIndex, cell) {
+    return days[dayIndex].cell_states
+      ? days[dayIndex].cell_states[cell]?.editable === true
+      : Boolean(days[dayIndex].editable);
+  }
   function isBlocked(dayIndex, cell) {
     if (days[dayIndex].effective_cells !== null) {
       return selected[dayIndex].has(cell);
@@ -85,15 +100,19 @@ export function createPlannerGrid(parent, days, changed, initialScroll = 0, {gen
   function refresh(dayIndex, cell) {
     const button = buttons[dayIndex][cell];
     const blocked = isBlocked(dayIndex, cell);
-    const locked = !days[dayIndex].editable;
+    const locked = !isEditable(dayIndex, cell);
+    const partial = (days[dayIndex].cell_states?.[cell]?.partial ??
+      (days[dayIndex].effective_cells === null && blocked));
     button.classList.toggle("is-blocked", blocked);
     button.classList.toggle("is-locked", locked);
-    button.classList.toggle("is-partial", days[dayIndex].effective_cells === null && blocked);
-    button.textContent = blocked ? (days[dayIndex].effective_cells === null ? "◐" : "×") : "";
+    button.classList.toggle("is-partial", partial);
+    button.textContent = blocked ? (partial ? "◐" : "×") : "";
     button.setAttribute("aria-pressed", String(blocked));
     button.setAttribute("aria-disabled", String(locked || !enabled));
-    const dayLabel = genericWeek ? names[weekday(days[dayIndex].date)] : days[dayIndex].date;
-    const description = `${dayLabel} ${clock(cell * 15)}–${clock((cell + 1) * 15)}: ` +
+    const dayLabel = genericWeek ? names[weekday(days[dayIndex].date)] :
+      (days[dayIndex].cell_states?.[cell]?.calendar_date ?? days[dayIndex].date);
+    const minute = (rolloverMinute + cell * 15) % 1440;
+    const description = `${dayLabel} ${clock(minute)}–${clock(minute + 15)}: ` +
       (locked ? "locked, " : "") + (blocked ? "unavailable" : "available");
     button.setAttribute("aria-label", description);
     button.title = description;
@@ -102,8 +121,10 @@ export function createPlannerGrid(parent, days, changed, initialScroll = 0, {gen
   const body = node("tbody", "", table);
   for (let cell = 0; cell < 96; cell++) {
     const row = node("tr", "", body);
-    if (cell % 4 === 0) row.className = "planner-hour";
-    const time = node("th", clock(cell * 15), row);
+    if ((rolloverMinute + cell * 15) % 60 === 0) row.className = "planner-hour";
+    const minute = (rolloverMinute + cell * 15) % 1440;
+    const time = node("th", clock(minute), row);
+    if (minute < rolloverMinute) node("small", "Next Day", time);
     time.scope = "row";
     for (let dayIndex = 0; dayIndex < 7; dayIndex++) {
       const td = node("td", "", row);
@@ -124,7 +145,7 @@ export function createPlannerGrid(parent, days, changed, initialScroll = 0, {gen
   }
 
   function setCell(dayIndex, cell, value) {
-    if (!enabled || !days[dayIndex].editable) return;
+    if (!enabled || !isEditable(dayIndex, cell)) return;
     const key = `${dayIndex}:${cell}`;
     if (painting && visited.has(key)) return;
     visited.add(key);
@@ -139,7 +160,7 @@ export function createPlannerGrid(parent, days, changed, initialScroll = 0, {gen
     const button = target(event);
     if (!button || !enabled) return;
     const d = Number(button.dataset.day), c = Number(button.dataset.cell);
-    if (!days[d].editable) return;
+    if (!isEditable(d, c)) return;
     event.preventDefault();
     button.focus();
     painting = true;

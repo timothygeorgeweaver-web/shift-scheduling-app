@@ -1,10 +1,11 @@
 import {
   node, action, addDays, weekday, monthHeading, createPlannerGrid
-} from "/static/planner-grid.js?v=2";
+} from "/static/planner-grid.js?v=3";
+import {projectBusinessPlanner, businessPlannerChanges} from "/static/unavailability-business-day.js?v=1";
 
 export function createUnavailabilityManager({api, expired}) {
   let root = null, epoch = 0, cleanup = () => {};
-  const minDate = "2000-01-01", maxFirst = "9998-12-25";
+  const minDate = "2000-01-01", maxFirst = "9998-12-24";
 
   function reset() {
     epoch++;
@@ -43,7 +44,8 @@ export function createUnavailabilityManager({api, expired}) {
     const scrollPositions = {main: 0, bulk: 0};
     const say = text => { if (alive()) status.textContent = text; };
     const profile = () => profiles.find(p => p.location_id === location);
-    const endpoint = () => "/api/v1/me/planner/" + encodeURIComponent(location);
+    const endpoint = () => "/api/v1/me/business-planner/" + encodeURIComponent(location);
+    const bulkEndpoint = () => "/api/v1/me/planner/" + encodeURIComponent(location);
 
     function same(a, b) { return JSON.stringify(a) === JSON.stringify(b); }
     function changedDates() {
@@ -142,7 +144,8 @@ export function createUnavailabilityManager({api, expired}) {
       view.replaceChildren();
       say("Loading calendar…");
       const loaded = await request(endpoint() + "?start=" + first);
-      data = loaded;
+      data = projectBusinessPlanner(loaded);
+      profiles = profiles.map(p => p.location_id === location ? data.profile : p);
       for (const day of data.days) draft[day.date] = [...(day.effective_cells || [])];
       refreshRequired = false;
       render();
@@ -207,9 +210,9 @@ export function createUnavailabilityManager({api, expired}) {
       const footer = node("div");
       footer.className = "team-controls planner-footer";
       const save = action("Save changes", footer, () => {
-        const changes = changedDates().map(day => ({
-          date: day.date, expected_revision: day.revision, cells: draft[day.date]
-        }));
+        let changes;
+        try { changes = businessPlannerChanges(data, draft); }
+        catch (error) { say(error.message); return; }
         if (!changes.length || refreshRequired) return;
         task(async () => {
           try {
@@ -222,7 +225,7 @@ export function createUnavailabilityManager({api, expired}) {
                 changes
               })
             });
-            data = result;
+            data = projectBusinessPlanner(result);
             draft = Object.fromEntries(data.days.map(day => [
               day.date, [...(day.effective_cells || [])]
             ]));
@@ -245,7 +248,7 @@ export function createUnavailabilityManager({api, expired}) {
         draft[data.days[index].date] = cells;
         save.disabled = refreshRequired || changedDates().length === 0;
         say("Unsaved changes.");
-      }, scrollPositions.main);
+      }, scrollPositions.main, {rolloverMinute: data.profile.business_day_start_minute});
       grid.setEnabled(!refreshRequired);
       view.append(footer);
     }
@@ -314,7 +317,7 @@ export function createUnavailabilityManager({api, expired}) {
         task(async () => {
           preview = previewPayload = null;
           review.replaceChildren();
-          const result = await request(endpoint() + "/bulk/preview", postOptions(payload));
+          const result = await request(bulkEndpoint() + "/bulk/preview", postOptions(payload));
           preview = result;
           previewPayload = payload;
           showPreview();
@@ -356,7 +359,7 @@ export function createUnavailabilityManager({api, expired}) {
           const showDate = preview.changed_dates[0].date;
           task(async () => {
             try {
-              const result = await request(endpoint() + "/bulk/apply", postOptions(payload));
+              const result = await request(bulkEndpoint() + "/bulk/apply", postOptions(payload));
               clearGrid();
               mode = "main";
               first = weekStart(showDate);
