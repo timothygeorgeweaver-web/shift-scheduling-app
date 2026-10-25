@@ -1,3 +1,4 @@
+import {confirmAction} from "/static/confirm-dialog.js?v=1";
 "use strict";
 
 export function createStaffManager({api, expired, onBusinessDaySaved = () => {}}) {
@@ -513,9 +514,9 @@ export function createStaffManager({api, expired, onBusinessDaySaved = () => {}}
       buttons.append(saveOrder, cancel);
       dialog.append(buttons);
 
-      function close() {
+      async function close() {
         if (busy) return;
-        if (dirty && !window.confirm("Discard the unsaved job-type order?")) return;
+        if (dirty && !await confirmAction("Discard the unsaved job-type order?")) return;
         dialog.close();
         dialog.remove();
       }

@@ -596,3 +596,13 @@ dialog.shift-popup {
   color: #64748b;
   text-align: center;
 }
+
+.action-confirm-dialog::backdrop {
+  background: #182b3a26;
+}
+.action-confirm-dialog p {
+  line-height: 1.45;
+}
+.action-confirm-dialog button {
+  min-height: 40px;
+}

@@ -1,3 +1,4 @@
+import {confirmAction} from "/static/confirm-dialog.js?v=1";
 import {node, action, addDays, weekday} from "/static/planner-grid.js?v=2";
 import {createScheduleGrid, clockMinute} from "/static/schedule-grid.js?v=6";
 import {businessDateForLocal, calendarDateForCell} from "/static/business-day.js?v=1";
@@ -33,8 +34,8 @@ export function createShiftEditor({api, expired, identity, parent, onOpen}) {
     onOpen(false);
   }
 
-  function canClose() {
-    return !busy && (!dirty || window.confirm("Discard the unsaved shift?"));
+  async function canClose() {
+    return !busy && (!dirty || await confirmAction("Discard the unsaved shift?"));
   }
 
   const unload = event => {
@@ -125,8 +126,8 @@ export function createShiftEditor({api, expired, identity, parent, onOpen}) {
     popupMessage = null;
   }
 
-  function cancelPopup() {
-    if (!canClose()) return;
+  async function cancelPopup() {
+    if (!(await canClose())) return;
     selectedStart = null;
     dirty = false;
     render();
@@ -192,8 +193,8 @@ export function createShiftEditor({api, expired, identity, parent, onOpen}) {
     return select;
   }
 
-  function chooseExisting(shift, anchor) {
-    if (busy || needsRefresh || !canClose()) return;
+  async function chooseExisting(shift, anchor) {
+    if (busy || needsRefresh || !(await canClose())) return;
     popupAnchor = anchor.getBoundingClientRect();
     selectedStart = {
       day: shift.local_start.slice(0, 10),
@@ -269,8 +270,8 @@ export function createShiftEditor({api, expired, identity, parent, onOpen}) {
 
     renderCoverage();
 
-    createScheduleGrid(content, data, roles, (day, minute, position, anchor) => {
-      if (busy || needsRefresh || !canClose()) return;
+    createScheduleGrid(content, data, roles, async (day, minute, position, anchor) => {
+      if (busy || needsRefresh || !(await canClose())) return;
       popupAnchor = anchor.getBoundingClientRect();
       plannerScroll = position;
       selectedStart = {day, minute};
@@ -387,20 +388,20 @@ export function createShiftEditor({api, expired, identity, parent, onOpen}) {
     save.disabled = !activeRoles.length;
     save.type = "submit";
     save.className = "button secondary";
-    action("Cancel", inputFields, () => {
-      if (!canClose()) return;
+    action("Cancel", inputFields, async () => {
+      if (!(await canClose())) return;
       selectedStart = null;
       dirty = false;
       render();
       say("Shift entry cancelled.");
     });
     if (editing) {
-      const remove = action("Delete shift", inputFields, () => {
+      const remove = action("Delete shift", inputFields, async () => {
         if (busy || needsRefresh) return;
         const description = `${editing.role_name}, ` +
           `${editing.local_start.slice(0, 16).replace("T", " ")} to ` +
           `${editing.local_end.slice(0, 16).replace("T", " ")}`;
-        if (!window.confirm(
+        if (!await confirmAction(
           `Delete this saved shift?\n${description}\n` +
           (dirty ? "Your unsaved changes will also be discarded." : "")
         )) return;
@@ -474,7 +475,7 @@ export function createShiftEditor({api, expired, identity, parent, onOpen}) {
   }
 
   async function open(targetLocation, targetWeek) {
-    if (!canClose()) return;
+    if (!(await canClose())) return;
     reset();
     location = targetLocation;
     weekId = targetWeek;
@@ -487,11 +488,11 @@ export function createShiftEditor({api, expired, identity, parent, onOpen}) {
     status.setAttribute("role", "status");
     controls = node("fieldset", "", root);
     node("legend", "Week controls", controls);
-    refreshButton = action("Refresh week", controls, () => {
-      if (canClose()) task(load);
+    refreshButton = action("Refresh week", controls, async () => {
+      if ((await canClose())) task(load);
     });
-    closeButton = action("Close week", controls, () => {
-      if (canClose()) reset();
+    closeButton = action("Close week", controls, async () => {
+      if ((await canClose())) reset();
     });
     content = node("div", "", root);
     inputFields = null;

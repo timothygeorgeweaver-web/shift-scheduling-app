@@ -1,3 +1,4 @@
+import {confirmAction} from "/static/confirm-dialog.js?v=1";
 import {node, action, addDays} from "/static/planner-grid.js?v=2";
 
 export function askTemplateName(parent, week) {
@@ -26,8 +27,8 @@ export function askTemplateName(parent, week) {
       resolve(value);
     }
 
-    function cancel() {
-      if (dirty && !window.confirm("Discard the unsaved template name?")) return;
+    async function cancel() {
+      if (dirty && !await confirmAction("Discard the unsaved template name?")) return;
       finish(null);
     }
 

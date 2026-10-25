@@ -1,3 +1,4 @@
+import {confirmAction} from "/static/confirm-dialog.js?v=1";
 import {node, action, addDays} from "/static/planner-grid.js?v=2";
 
 export function askTemplateChange(parent, template, weeks) {
@@ -36,8 +37,8 @@ export function askTemplateChange(parent, template, weeks) {
       dialog.remove();
       resolve(value);
     }
-    function cancel() {
-      if (dirty && !window.confirm("Discard unsaved template changes?")) return;
+    async function cancel() {
+      if (dirty && !await confirmAction("Discard unsaved template changes?")) return;
       finish(null);
     }
 
@@ -45,8 +46,8 @@ export function askTemplateChange(parent, template, weeks) {
     save.type = "submit";
     save.className = "button secondary";
     action("Cancel", form, cancel);
-    action("Archive template", form, () => {
-      if (!window.confirm(
+    action("Archive template", form, async () => {
+      if (!await confirmAction(
         `Archive "${template.name}"? It will disappear from the template list. ` +
         "Existing schedule weeks stay unchanged. Unsaved changes will be discarded."
       )) return;
@@ -57,7 +58,7 @@ export function askTemplateChange(parent, template, weeks) {
       dirty = true;
       name.setCustomValidity("");
     });
-    form.addEventListener("submit", event => {
+    form.addEventListener("submit", async event => {
       event.preventDefault();
       const cleaned = name.value.trim();
       if (!cleaned) {
@@ -67,7 +68,7 @@ export function askTemplateChange(parent, template, weeks) {
       }
       if (!form.reportValidity()) return;
       const week = weeks.find(item => item.id === source.value);
-      if (week && !window.confirm(
+      if (week && !await confirmAction(
         `Replace "${template.name}" with the shifts from ${week.week_start_date} – ` +
         `${addDays(week.week_start_date, 6)}? Previously created weeks stay unchanged.`
       )) return;

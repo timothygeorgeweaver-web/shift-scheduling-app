@@ -1,8 +1,9 @@
+import {confirmAction} from "/static/confirm-dialog.js?v=1";
 import {node, action, addDays, weekday} from "/static/planner-grid.js?v=2";
-import {createShiftEditor} from "/static/shift-editor.js?v=12";
-import {createAssignmentEditor} from "/static/assignment-editor.js?v=3";
-import {askTemplateName} from "/static/template-name-dialog.js?v=1";
-import {createTemplateEditor} from "/static/template-editor.js?v=4";
+import {createShiftEditor} from "/static/shift-editor.js?v=13";
+import {createAssignmentEditor} from "/static/assignment-editor.js?v=4";
+import {askTemplateName} from "/static/template-name-dialog.js?v=2";
+import {createTemplateEditor} from "/static/template-editor.js?v=5";
 import {askTemplateApplication} from "/static/template-apply-dialog.js?v=1";
 
 export function createScheduleManager({api, expired, onEditorOpen = () => {}}) {
@@ -331,10 +332,10 @@ export function createScheduleManager({api, expired, onEditorOpen = () => {}}) {
       if (busy || editorOpen || !ready || week?.state !== "draft") return;
       assigner.open(select.value, week.id);
     }
-    function clearWeekAssignments() {
+    async function clearWeekAssignments() {
       const week = selectedWeek();
       if (busy || editorOpen || !ready || week?.state !== "draft") return;
-      if (!window.confirm(
+      if (!await confirmAction(
         `Clear ALL employee assignments for week ${week.week_start_date}?\n` +
         "Every shift will remain in the planner as Unassigned."
       )) return;
@@ -362,7 +363,7 @@ export function createScheduleManager({api, expired, onEditorOpen = () => {}}) {
         say(`Saved template: ${name}.`);
       });
     }
-    function copyWeek() {
+    async function copyWeek() {
       if (!validSelection() || busy) return;
       if (!copySource) {
         const week = selectedWeek();
@@ -375,7 +376,7 @@ export function createScheduleManager({api, expired, onEditorOpen = () => {}}) {
       }
       if (covered(selected)) return;
       const day = selected, source = {...copySource};
-      if (!window.confirm(`Copy week ${source.week_start_date} to ${day}? The source stays unchanged.`)) return;
+      if (!await confirmAction(`Copy week ${source.week_start_date} to ${day}? The source stays unchanged.`)) return;
       task(async () => {
         await request(weeksUrl() + "/" + encodeURIComponent(source.id) + "/copy", mutation({
           week_start_date: day, expected_source_revision: source.revision,
@@ -386,10 +387,10 @@ export function createScheduleManager({api, expired, onEditorOpen = () => {}}) {
         say("Week copied into an independent draft.");
       });
     }
-    function deleteWeek() {
+    async function deleteWeek() {
       const week = selectedWeek();
       if (busy || !ready || week?.state !== "draft") return;
-      if (!window.confirm(`Delete the whole draft week ${week.week_start_date} – ${addDays(week.week_start_date, 6)} and all its shifts?\nSaved templates stay unchanged. This date will become available for a fresh week.`)) return;
+      if (!await confirmAction(`Delete the whole draft week ${week.week_start_date} – ${addDays(week.week_start_date, 6)} and all its shifts?\nSaved templates stay unchanged. This date will become available for a fresh week.`)) return;
       task(async () => {
         await request(weeksUrl() + "/" + encodeURIComponent(week.id) + "/remove",
           mutation({expected_week_revision: week.revision}));
@@ -404,7 +405,7 @@ export function createScheduleManager({api, expired, onEditorOpen = () => {}}) {
       const day = selected;
       const choice = await askTemplateApplication(panel, templates, day, week, abort.signal);
       if (!choice || !active()) return;
-      if (week && choice.mode === "replace" && !window.confirm(
+      if (week && choice.mode === "replace" && !await confirmAction(
         `Replace ALL shifts in week ${day} with template "${choice.template.name}"?`
       )) return;
       task(async () => {
@@ -427,8 +428,8 @@ export function createScheduleManager({api, expired, onEditorOpen = () => {}}) {
       templateEditor.open({locationId: select.value, locationRevision: state.location.revision,
         rolloverMinute: state.location.business_day_start_minute, templateId: template?.id ?? null});
     }
-    function archiveTemplate(template) {
-      if (busy || !ready || !window.confirm(`Archive "${template.name}"? Existing weeks stay unchanged.`)) return;
+    async function archiveTemplate(template) {
+      if (busy || !ready || !await confirmAction(`Archive "${template.name}"? Existing weeks stay unchanged.`)) return;
       task(async () => {
         await request(templatesUrl() + "/" + encodeURIComponent(template.id), mutation({
           name: template.name, active: false, expected_template_revision: template.revision

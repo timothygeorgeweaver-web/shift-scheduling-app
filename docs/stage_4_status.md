@@ -729,3 +729,21 @@ unassign requests retain server-side authorization and revision checks.
 
 Candidate-load failures offer reopening the shift to retry. Existing
 viewport observation accommodates changes in window content.
+
+## Shared floating confirmations
+
+Replaced native in-app confirmation prompts with a shared asynchronous
+dialog positioned beside the active control and constrained to the visible
+viewport. This covers assignment replacement/unassignment, schedule and
+template actions, shift deletion, job-order discard and planner discard.
+
+Cancel receives initial focus; Escape cancels. Confirmations opened within
+another dialog use a separate modal layer. Removing the underlying view
+cancels the pending confirmation. User text is rendered with textContent.
+
+All affected JavaScript modules passed assistant-side syntax checks.
+A focused simulation covered screen-edge positioning, acceptance,
+cancellation, duplicate prevention and owner-removal cleanup.
+Owner browser acceptance remains pending.
+
+Browser-controlled tab-close/reload warnings remain unchanged.

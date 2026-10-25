@@ -1,3 +1,4 @@
+import {confirmAction} from "/static/confirm-dialog.js?v=1";
 import {
   node, action, addDays, weekday, monthHeading, createPlannerGrid
 } from "/static/planner-grid.js?v=3";
@@ -60,8 +61,8 @@ export function createUnavailabilityManager({api, expired}) {
     function dirty() {
       return mode === "bulk" ? hasTemplate() : changedDates().length > 0;
     }
-    function discardOK() {
-      return !dirty() || window.confirm("Discard the unsaved planner changes?");
+    async function discardOK() {
+      return !dirty() || await confirmAction("Discard the unsaved planner changes?");
     }
     function clearGrid() {
       if (grid) {
@@ -180,11 +181,11 @@ export function createUnavailabilityManager({api, expired}) {
       if (!data) return;
       const toolbar = node("div", "", view);
       toolbar.className = "team-controls";
-      action("Refresh calendar", toolbar, () => {
-        if (discardOK()) task(loadCalendar);
+      action("Refresh calendar", toolbar, async () => {
+        if ((await discardOK())) task(loadCalendar);
       });
-      const open = action("Set Recurring Unavailability", toolbar, () => {
-        if (!discardOK()) return;
+      const open = action("Set Recurring Unavailability", toolbar, async () => {
+        if (!(await discardOK())) return;
         clearGrid();
         mode = "bulk";
         bulk = {
@@ -198,8 +199,8 @@ export function createUnavailabilityManager({api, expired}) {
       });
       open.disabled = refreshRequired;
 
-      navigation(view, first, count => {
-        if (!discardOK()) return;
+      navigation(view, first, async count => {
+        if (!(await discardOK())) return;
         const candidate = addDays(first, count);
         if (candidate < minDate || candidate > maxFirst) return;
         first = candidate;
@@ -242,8 +243,8 @@ export function createUnavailabilityManager({api, expired}) {
         });
       });
       save.disabled = refreshRequired || changedDates().length === 0;
-      action("Discard changes", footer, () => {
-        if (!discardOK()) return;
+      action("Discard changes", footer, async () => {
+        if (!(await discardOK())) return;
         task(loadCalendar);
       });
 
@@ -351,8 +352,8 @@ export function createUnavailabilityManager({api, expired}) {
           say("Preview ready. Review the changed and skipped dates before submitting.");
         });
       });
-      action("Return to main calendar", controls, () => {
-        if (!discardOK()) return;
+      action("Return to main calendar", controls, async () => {
+        if (!(await discardOK())) return;
         clearGrid();
         mode = "main";
         preview = previewPayload = null;
@@ -405,10 +406,10 @@ export function createUnavailabilityManager({api, expired}) {
       if (preview && previewPayload) showPreview();
     }
 
-    select.addEventListener("change", () => {
+    select.addEventListener("change", async () => {
       const chosen = select.value;
       select.value = location;
-      if (!discardOK()) return;
+      if (!(await discardOK())) return;
       location = chosen;
       const p = profile();
       first = weekStart(addDays(localToday(p.timezone), Math.max(14, p.cutoff_days_before + 7)));

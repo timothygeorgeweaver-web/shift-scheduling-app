@@ -1,7 +1,8 @@
+import {confirmAction} from "/static/confirm-dialog.js?v=1";
 import {node, action, addDays, weekday} from "/static/planner-grid.js?v=2";
 import {compareShifts, clockMinute} from "/static/schedule-grid.js?v=6";
 import {businessDateForLocal} from "/static/business-day.js?v=1";
-import {createAssignmentControls} from "/static/assignment-controls.js?v=2";
+import {createAssignmentControls} from "/static/assignment-controls.js?v=3";
 
 const names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 const startMinute = shift =>
@@ -46,9 +47,9 @@ export function createAssignmentEditor({api, expired, identity, parent, onOpen})
     root.hidden = true;
     onOpen(false);
   }
-  function canClose() {
+  async function canClose() {
     return !busy && (!dirty ||
-      window.confirm("Discard unsaved employee assignment changes?"));
+      await confirmAction("Discard unsaved employee assignment changes?"));
   }
   function endpoint() {
     return "/api/v1/staff/locations/" + encodeURIComponent(location) +
@@ -136,13 +137,13 @@ export function createAssignmentEditor({api, expired, identity, parent, onOpen})
     popup.style.left = Math.max(minimumLeft, Math.min(left, maximumLeft)) + "px";
     popup.style.top = Math.max(minimumTop, Math.min(top, maximumTop)) + "px";
   }
-  function closePopup() {
-    if (!canClose()) return;
+  async function closePopup() {
+    if (!(await canClose())) return;
     dirty = false;
     dismiss();
   }
-  function choose(shift, card) {
-    if (busy || needsRefresh || !canClose()) return;
+  async function choose(shift, card) {
+    if (busy || needsRefresh || !(await canClose())) return;
     dirty = false;
     dismiss();
     anchorBox = card.getBoundingClientRect();
@@ -287,11 +288,11 @@ export function createAssignmentEditor({api, expired, identity, parent, onOpen})
     status.setAttribute("role", "status");
     controls = node("fieldset", "", root);
     node("legend", "Assignment controls", controls);
-    action("Refresh assigner", controls, () => {
-      if (canClose()) task(load);
+    action("Refresh assigner", controls, async () => {
+      if ((await canClose())) task(load);
     });
-    action("Close assigner", controls, () => {
-      if (canClose()) reset();
+    action("Close assigner", controls, async () => {
+      if ((await canClose())) reset();
     });
     content = node("div", "", root);
     heading.focus();

@@ -1,6 +1,6 @@
-import {createStaffManager} from "/static/staff.js?v=11";
-import {createUnavailabilityManager} from "/static/unavailability.js?v=7";
-import {createScheduleManager} from "/static/schedules.js?v=23";
+import {createStaffManager} from "/static/staff.js?v=12";
+import {createUnavailabilityManager} from "/static/unavailability.js?v=8";
+import {createScheduleManager} from "/static/schedules.js?v=24";
 
 (() => {
   "use strict";

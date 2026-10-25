@@ -1,3 +1,4 @@
+import {confirmAction} from "/static/confirm-dialog.js?v=1";
 import {node, action, addDays, weekday} from "/static/planner-grid.js?v=2";
 import {createScheduleGrid, clockMinute} from "/static/schedule-grid.js?v=6";
 
@@ -31,12 +32,12 @@ export function createTemplateEditor({api, expired, identity, parent, onOpen, on
     onOpen(false);
   }
 
-  function canClose() {
-    return !busy && (!dirty || window.confirm("Discard local template changes?"));
+  async function canClose() {
+    return !busy && (!dirty || await confirmAction("Discard local template changes?"));
   }
 
-  function close() {
-    if (canClose()) reset();
+  async function close() {
+    if ((await canClose())) reset();
   }
 
   const unload = event => {
@@ -151,13 +152,13 @@ export function createTemplateEditor({api, expired, identity, parent, onOpen, on
     save.className = "button secondary";
     save.disabled = !activeRoles.length;
 
-    function cancel() {
-      if (popupDirty && !window.confirm("Discard these shift changes?")) return;
+    async function cancel() {
+      if (popupDirty && !await confirmAction("Discard these shift changes?")) return;
       dismissPopup();
     }
     action("Cancel", form, cancel);
-    if (existing) action("Delete shift", form, () => {
-      if (!window.confirm("Remove this shift from the template draft?")) return;
+    if (existing) action("Delete shift", form, async () => {
+      if (!await confirmAction("Remove this shift from the template draft?")) return;
       draft.slots = draft.slots.filter(slot => slot.key !== existing.key);
       dirty = true;
       message = "Unsaved template changes.";
@@ -299,7 +300,7 @@ export function createTemplateEditor({api, expired, identity, parent, onOpen, on
   }
 
   async function open(options) {
-    if (!canClose()) return;
+    if (!(await canClose())) return;
     reset();
     context = {...options};
     root.hidden = false;

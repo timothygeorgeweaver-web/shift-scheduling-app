@@ -1,3 +1,4 @@
+import {confirmAction} from "/static/confirm-dialog.js?v=1";
 import {node, action} from "/static/planner-grid.js?v=2";
 
 const labels = {
@@ -130,9 +131,9 @@ export function createAssignmentControls({
   save.className = "button secondary";
   save.disabled = true;
 
-  const remove = action("Unassign employee", section, () => {
+  const remove = action("Unassign employee", section, async () => {
     if (loading || !canEdit() || !assignment || policyRevision === null) return;
-    if (!window.confirm(
+    if (!await confirmAction(
       `Unassign ${assignment.display_name}? The shift will remain in the planner.`
     )) return;
     run(async current => {
@@ -161,7 +162,7 @@ export function createAssignmentControls({
   remove.disabled = !assignment || policyRevision === null;
 
   form.addEventListener("input", markDirty);
-  form.addEventListener("submit", event => {
+  form.addEventListener("submit", async event => {
     event.preventDefault();
     if (loading || !canEdit() || !selected || !form.reportValidity()) return;
     if (selected.category === "blocked") return;
@@ -178,7 +179,7 @@ export function createAssignmentControls({
 
     const replacing = assignment &&
       assignment.employee_id !== selected.employee_id;
-    if (replacing && !window.confirm(
+    if (replacing && !await confirmAction(
       `Replace ${assignment.display_name} with ${selected.display_name}?`
     )) return;
 
