@@ -716,3 +716,16 @@ Added a confirmed Clear All Assignments action that calls the atomic clear
 API and preserves the shift pattern. Assignment drafts participate in
 unsaved-change prompts. Static asset checks passed; owner browser acceptance
 is pending.
+
+## Assignment window simplification
+
+Opening an assignment card now loads candidate employees automatically.
+Removed manual Load employees and Reload employees buttons.
+
+Week-detail responses include the current location revision so an existing
+assignment can be unassigned immediately without depending on candidate-list
+loading. Unassign is outside the candidate-loading fieldset. Save and
+unassign requests retain server-side authorization and revision checks.
+
+Candidate-load failures offer reopening the shift to retry. Existing
+viewport observation accommodates changes in window content.

@@ -1,7 +1,7 @@
 import {node, action, addDays, weekday} from "/static/planner-grid.js?v=2";
 import {compareShifts, clockMinute} from "/static/schedule-grid.js?v=6";
 import {businessDateForLocal} from "/static/business-day.js?v=1";
-import {createAssignmentControls} from "/static/assignment-controls.js?v=1";
+import {createAssignmentControls} from "/static/assignment-controls.js?v=2";
 
 const names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 const startMinute = shift =>
@@ -160,12 +160,13 @@ export function createAssignmentEditor({api, expired, identity, parent, onOpen})
     message.className = "assignment-popup-status team-status";
     message.setAttribute("role", "status");
 
-    createAssignmentControls({
+    const assignmentControls = createAssignmentControls({
       parent: popup,
       endpoint: endpoint() + "/shifts/" + encodeURIComponent(shift.id),
       shift,
       assignment: (data.assignments ?? []).find(a => a.slot_id === shift.id) ?? null,
       weekRevision: data.week.revision,
+      locationRevision: data.location_revision,
       request,
       run: task,
       canEdit: () => !busy && !needsRefresh,
@@ -181,6 +182,7 @@ export function createAssignmentEditor({api, expired, identity, parent, onOpen})
       closePopup();
     });
     popup.showModal();
+    assignmentControls.start();
     popupObserver = new ResizeObserver(positionPopup);
     popupObserver.observe(popup);
     positionPopup();

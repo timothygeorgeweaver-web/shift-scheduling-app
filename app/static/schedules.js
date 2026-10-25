@@ -1,6 +1,6 @@
 import {node, action, addDays, weekday} from "/static/planner-grid.js?v=2";
 import {createShiftEditor} from "/static/shift-editor.js?v=12";
-import {createAssignmentEditor} from "/static/assignment-editor.js?v=2";
+import {createAssignmentEditor} from "/static/assignment-editor.js?v=3";
 import {askTemplateName} from "/static/template-name-dialog.js?v=1";
 import {createTemplateEditor} from "/static/template-editor.js?v=4";
 import {askTemplateApplication} from "/static/template-apply-dialog.js?v=1";

@@ -64,6 +64,10 @@ def schedule_detail(
                 "SELECT scheduling.read_schedule_assignments(%s) AS result",
                 (week_id,),
             ).fetchone()["result"]
+            result["location_revision"] = conn.execute(
+                "SELECT revision FROM scheduling.location WHERE id=%s",
+                (location_id,),
+            ).fetchone()["revision"]
             return result
         except psycopg.Error as error:
             fail(error)

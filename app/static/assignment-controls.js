@@ -12,7 +12,7 @@ const labels = {
 };
 
 export function createAssignmentControls({
-  parent, endpoint, shift, assignment, weekRevision,
+  parent, endpoint, shift, assignment, weekRevision, locationRevision,
   request, run, canEdit, markDirty, onSaved, say
 }) {
   const section = node("section", "", parent);
@@ -30,7 +30,7 @@ export function createAssignmentControls({
   const form = node("form", "", section);
   const fields = node("fieldset", "", form);
   node("legend", "Choose an employee", fields);
-  const message = node("p", "Load employees to check current eligibility.", fields);
+  const message = node("p", "Loading employees…", fields);
   message.setAttribute("role", "status");
   const choices = node("div", "", fields);
   const approvals = node("div", "", fields);
@@ -39,20 +39,17 @@ export function createAssignmentControls({
   const blockedList = node("ul", "", blocked);
   blocked.hidden = true;
 
-  let selected = null, select = null, policyRevision = null;
+  let selected = null, select = null, policyRevision = locationRevision ?? null;
   let candidates = new Map(), approvalFields = [];
   let loading = false;
 
-  const loadButton = action("Load employees", fields, () => {
-    if (loading || !canEdit()) {
-      say("Save or cancel any unsaved shift changes before checking employees.");
-      return;
-    }
-    run(async current => {
-      loading = true;
-      fields.disabled = true;
-      try {
-        const result = await request(endpoint + "/candidates", {}, current);
+  let started = false;
+  async function loadEmployees() {
+    if (started) return;
+    started = true;
+    fields.disabled = true;
+    try {
+        const result = await request(endpoint + "/candidates", {});
         if (!section.isConnected) return;
         choices.replaceChildren();
         approvals.replaceChildren();
@@ -60,7 +57,6 @@ export function createAssignmentControls({
         candidates = new Map();
         selected = null;
         approvalFields = [];
-        policyRevision = null;
         save.disabled = true;
 
         const label = node("label", "Employee", choices);
@@ -92,7 +88,6 @@ export function createAssignmentControls({
         }
         blocked.hidden = !blockedList.children.length;
         remove.disabled = !assignment || policyRevision === null;
-        loadButton.textContent = "Reload employees";
         message.textContent = candidates.size
           ? "Eligibility is checked again when you save."
           : "No employee profiles are available at this workplace.";
@@ -120,19 +115,22 @@ export function createAssignmentControls({
             approvalFields.push({code, confirm, reason});
           }
         });
-      } finally {
-        loading = false;
-        if (section.isConnected) fields.disabled = false;
+    } catch (error) {
+      if (section.isConnected) {
+        message.textContent = error.message +
+          " Close and reopen this shift to retry loading employees.";
       }
-    });
-  });
+    } finally {
+      if (section.isConnected) fields.disabled = loading;
+    }
+  }
 
   const save = node("button", "Save assignment", fields);
   save.type = "submit";
   save.className = "button secondary";
   save.disabled = true;
 
-  const remove = action("Unassign employee", fields, () => {
+  const remove = action("Unassign employee", section, () => {
     if (loading || !canEdit() || !assignment || policyRevision === null) return;
     if (!window.confirm(
       `Unassign ${assignment.display_name}? The shift will remain in the planner.`
@@ -160,7 +158,7 @@ export function createAssignmentControls({
     });
   });
   remove.hidden = !assignment;
-  remove.disabled = true;
+  remove.disabled = !assignment || policyRevision === null;
 
   form.addEventListener("input", markDirty);
   form.addEventListener("submit", event => {
@@ -210,4 +208,5 @@ export function createAssignmentControls({
       }
     });
   });
+  return {start: loadEmployees};
 }
