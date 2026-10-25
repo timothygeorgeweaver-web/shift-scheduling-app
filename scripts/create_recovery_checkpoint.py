@@ -180,7 +180,7 @@ def main():
 
     before = fingerprint(SOURCE)
     migration_paths = sorted((ROOT / "migrations").glob("[0-9][0-9][0-9][0-9]_*.sql"))
-    require(len(migration_paths) == 34, "Expected thirty-four reviewed migration files.")
+    require(len(migration_paths) == 35, "Expected thirty-five reviewed migration files.")
     expected_migrations = {
         item.stem: hashlib.sha256(item.read_bytes()).hexdigest()
         for item in migration_paths

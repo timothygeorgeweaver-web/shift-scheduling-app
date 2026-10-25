@@ -572,3 +572,24 @@ The validator is pure and performs no writes. It must be called after actor
 authorization, transaction locking and fresh eligibility evaluation.
 Atomic assignment/approval/audit persistence and mutation integration remain
 pending; no assignment save endpoint is enabled by this change.
+
+## Internal atomic assignment recorder
+
+Added an owner-only, security-invoker persistence primitive for a validated
+assignment decision. It reacquires the assignment scope, verifies revisions,
+active qualification, expected current assignment and replacement
+confirmation, then writes assignment, per-rule approval records, shift/week
+revisions and audit history in the caller's transaction.
+
+This primitive deliberately trusts a decision from a future protected
+eligibility service. It is not a public authorization boundary and must not
+be granted to the application role. PUBLIC and runtime execution are revoked.
+
+Focused disposable checks prove assignment/approval persistence and complete
+rollback when the final audit insert fails. Synthetic assignments are rolled
+back. Source assignment records remain empty and runtime assignment writes
+remain disabled.
+
+Trusted commit integration and assignment-aware shift edits, removals and
+template replacement are required before enabling runtime assignment saves.
+Recovery inventory includes twenty tables and thirty-five migrations.
