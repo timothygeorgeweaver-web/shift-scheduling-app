@@ -41,3 +41,13 @@ def publication_lock_plan(first_date, timezone_name, rollover_minute):
         "ends_at": bounds[-1][1].isoformat(),
         "calendar_windows": windows,
     }
+
+
+def changed_cells_touch_publication(before, after, windows):
+    """Detect changed quarter-hour cells inside published calendar windows."""
+    changed = set(before).symmetric_difference(after)
+    return any(
+        start <= cell*15 < end
+        for cell in changed
+        for start, end in windows
+    )

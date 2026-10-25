@@ -91,6 +91,7 @@ def gate(row):
     return (
         row["editable"], row["lock_reason"],
         row["cutoff"], row["frozen_blocked"],
+        row.get("publication_locked_windows", []),
     )
 
 

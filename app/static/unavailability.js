@@ -2,7 +2,7 @@ import {confirmAction} from "/static/confirm-dialog.js?v=1";
 import {
   node, action, addDays, weekday, monthHeading, createPlannerGrid
 } from "/static/planner-grid.js?v=3";
-import {projectBusinessPlanner, businessPlannerChanges} from "/static/unavailability-business-day.js?v=1";
+import {projectBusinessPlanner, businessPlannerChanges} from "/static/unavailability-business-day.js?v=2";
 
 export function createUnavailabilityManager({api, expired}) {
   let root = null, epoch = 0, cleanup = () => {};

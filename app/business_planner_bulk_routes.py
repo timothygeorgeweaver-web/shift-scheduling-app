@@ -18,6 +18,7 @@ from app.planner_bulk_routes import BulkRequest, gate_state, lock_scope
 from app.planner_logic import normalize_cells
 from app.security import session_token_digest
 from app.staff_write_routes import mutation_token
+from app.publication_locks import changed_cells_touch_publication
 from app.unavailability_business_day import (
     bulk_calendar_additions, calendar_address,
 )
@@ -77,14 +78,16 @@ def build_preview(conn, location, body, digest, profile):
     changed, skipped = [], []
     for day, row in rows.items():
         labels = sorted(origins[day])
-        if not row["editable"]:
-            skipped.append({
-                "date": day.isoformat(), "business_dates": labels,
-                "reason": row["lock_reason"],
-            })
-            continue
         before = normalize_cells(row["blocked_cells"])
         after = normalize_cells(set(before).union(additions[day]))
+        if not row["editable"] or changed_cells_touch_publication(
+            before, after, row.get("publication_locked_windows", []),
+        ):
+            skipped.append({
+                "date": day.isoformat(), "business_dates": labels,
+                "reason": row["lock_reason"] or "published_week",
+            })
+            continue
         if before != after:
             changed.append({
                 "date": day.isoformat(), "business_dates": labels,

@@ -102,3 +102,26 @@ elapsed weeks across DST. Missing or repeated rollover boundaries fail closed.
 Partial-date persistence, changed-cell enforcement, planner lock indicators
 and atomic publication integration remain pending. No live lock is created
 by this helper.
+
+## Publication cell-lock enforcement
+
+Publication records define immutable saved business-week windows. Planner reads
+now expose their locked calendar-minute portions. Fully covered dates are
+read-only; partially covered dates retain editable adjacent-week hours.
+
+A database trigger serializes with publication and rejects raw date-cell
+changes inside published portions, including writes through the older calendar
+API. Existing independent cutoff/frozen-date restrictions still apply.
+
+The business-day browser projection uses per-cell publication locks. Mass-edit
+previews skip a date when its requested additions would change published cells;
+already-present blocked cells do not count as changes. Lock windows participate
+in preview and save gate comparisons.
+
+Focused disposable checks cover both edges, full-date locks, adjacent-week
+edits, older API bypass denial, multi-date rollback and mass-edit preview.
+No real publication is created by installation.
+
+Private effective-availability snapshots, frozen-interval integration and the
+atomic publication writer remain pending.
+Recovery inventory: 22 tables and 49 reviewed migrations.

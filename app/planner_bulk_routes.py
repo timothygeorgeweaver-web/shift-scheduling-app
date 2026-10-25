@@ -15,6 +15,7 @@ from app.auth_store import connection, identity
 from app.planner_logic import normalize_template, preview_additions
 from app.security import session_token_digest
 from app.staff_write_routes import mutation_token
+from app.publication_locks import changed_cells_touch_publication
 
 router = APIRouter(prefix="/api/v1/me/planner", tags=["planner mass edit"])
 LAST_FIRST_DATE = date(9998, 12, 25)
@@ -78,6 +79,7 @@ def gate_state(rows):
         day: (
             row["editable"], row["lock_reason"],
             row["cutoff"], row["frozen_blocked"],
+            row.get("publication_locked_windows", []),
         )
         for day, row in rows.items()
     }
@@ -86,7 +88,14 @@ def gate_state(rows):
 def build_preview(conn, location, body, digest, profile):
     rows = read_selected(conn, location, body)
     existing = {day: row["blocked_cells"] for day, row in rows.items()}
-    locked = {day for day, row in rows.items() if not row["editable"]}
+    locked = {
+        day for day, row in rows.items()
+        if not row["editable"] or changed_cells_touch_publication(
+            row["blocked_cells"],
+            set(row["blocked_cells"]).union(body.weekly_cells[str(day.weekday())]),
+            row.get("publication_locked_windows", []),
+        )
+    }
     plan = preview_additions(
         body.first_date, body.last_date, body.weekly_cells, existing, locked,
     )
@@ -119,7 +128,7 @@ def build_preview(conn, location, body, digest, profile):
         "changed_dates": changed,
         "added_cell_count": sum(row["added_cells"] for row in changed),
         "skipped_locked_dates": [
-            {"date": day.isoformat(), "reason": rows[day]["lock_reason"]}
+            {"date": day.isoformat(), "reason": rows[day]["lock_reason"] or "published_week"}
             for day in plan.skipped_locked_dates
         ],
         "unchanged_matching_dates": len(rows)-len(changed)-len(locked),

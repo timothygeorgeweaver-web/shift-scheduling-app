@@ -24,7 +24,10 @@ export function projectBusinessPlanner(data) {
       }
       return {
         calendar_date: actualDay, calendar_cell: minute / 15,
-        editable: row.editable && row.effective_cells !== null, partial
+        editable: row.editable && row.effective_cells !== null &&
+          !(row.publication_locked_windows ?? []).some(
+            ([start, end]) => start < minute + 15 && minute < end
+          ), partial
       };
     });
     return {
