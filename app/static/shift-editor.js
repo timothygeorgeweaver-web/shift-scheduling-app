@@ -12,6 +12,7 @@ export function createShiftEditor({api, expired, identity, parent, onOpen}) {
   let location = "", weekId = "", dirty = false, needsRefresh = false;
   let selectedStart = null, plannerScroll = 1408;
   let popup = null, popupMessage = null, popupAnchor = null;
+  let popupObserver = null;
   let status, content, controls, closeButton, refreshButton, inputFields;
 
   const names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
@@ -120,6 +121,8 @@ export function createShiftEditor({api, expired, identity, parent, onOpen}) {
   }
 
   function dismissPopup() {
+    popupObserver?.disconnect();
+    popupObserver = null;
     if (popup?.open) popup.close();
     popup?.remove();
     popup = null;
@@ -161,6 +164,8 @@ export function createShiftEditor({api, expired, identity, parent, onOpen}) {
   function presentPopup() {
     if (!popup) return;
     popup.showModal();
+    popupObserver = new ResizeObserver(positionPopup);
+    popupObserver.observe(popup);
     positionPopup();
     popup.querySelector("select")?.focus({preventScroll: true});
     requestAnimationFrame(positionPopup);
@@ -286,6 +291,9 @@ export function createShiftEditor({api, expired, identity, parent, onOpen}) {
       return;
     }
     const editing = selectedStart.shift ?? null;
+    const assignment = editing ? (data.assignments ?? []).find(
+      row => row.slot_id === editing.id
+    ) : null;
     popup = node("dialog", "", root);
     popup.className = "shift-popup";
     popup.setAttribute("aria-label", editing ? "Edit shift" : "Add shift");
@@ -315,6 +323,10 @@ export function createShiftEditor({api, expired, identity, parent, onOpen}) {
       node("p", `Saved shift: ${editing.role_name}, ` +
         `${editing.local_start.slice(0, 16).replace("T", " ")} to ` +
         `${editing.local_end.slice(0, 16).replace("T", " ")}.`, inputFields);
+    }
+    if (assignment) {
+      node("p", `Assigned to ${assignment.display_name}. ` +
+        "Check the proposed changes before saving. The employee stays assigned.", inputFields);
     }
     const activeRoles = roles.filter(role => role.active);
     if (!activeRoles.length && !editing) {
@@ -384,7 +396,60 @@ export function createShiftEditor({api, expired, identity, parent, onOpen}) {
     note.rows = 2;
     note.value = editing?.note ?? "";
 
-    const save = node("button", editing ? "Save changes" : "Add shift", inputFields);
+    const checks = node("section", "", inputFields);
+    checks.setAttribute("aria-label", "Assigned shift checks");
+    let checkedBody = null, approvalFields = [];
+    const save = node("button", assignment ? "Check changes" :
+      editing ? "Save changes" : "Add shift", inputFields);
+
+    function clearChecks(event) {
+      if (!assignment || checks.contains(event.target)) return;
+      checkedBody = null;
+      approvalFields = [];
+      checks.replaceChildren();
+      save.textContent = "Check changes";
+    }
+    form.addEventListener("input", clearChecks);
+    form.addEventListener("change", clearChecks);
+
+    function showChecks(result) {
+      checks.replaceChildren();
+      approvalFields = [];
+      const labels = {
+        unavailability: "Availability approval required",
+        daily_hours: "Daily hours approval required",
+        inactive_employee: "Employee is inactive",
+        inactive_role: "Job type is inactive",
+        not_qualified: "Employee is not qualified for this job type",
+        overlap: "Overlapping assignment",
+        rest_before: "Violates Rest Policy before this shift",
+        rest_after: "Violates Rest Policy after this shift"
+      };
+      if (result.hard_blocks.length) {
+        node("p", "These changes cannot be saved:", checks);
+        const list = node("ul", "", checks);
+        for (const code of result.hard_blocks) node("li", labels[code] ?? code, list);
+        return false;
+      }
+      for (const code of result.warnings) {
+        const box = node("fieldset", "", checks);
+        node("legend", labels[code] ?? code, box);
+        const confirmLabel = node("label", "I approve this warning", box);
+        const confirm = node("input", "", confirmLabel);
+        confirm.type = "checkbox";
+        confirm.required = true;
+        const reason = node("textarea", "",
+          node("label", "Reason for approval", box));
+        reason.required = true;
+        reason.maxLength = 500;
+        reason.rows = 2;
+        approvalFields.push({code, confirm, reason});
+      }
+      if (!result.warnings.length) {
+        node("p", "The assigned employee can work the proposed shift.", checks);
+      }
+      return true;
+    }
     save.disabled = !activeRoles.length;
     save.type = "submit";
     save.className = "button secondary";
@@ -455,9 +520,54 @@ export function createShiftEditor({api, expired, identity, parent, onOpen}) {
         note: note.value
       };
       if (editing) body.expected_shift_revision = editing.revision;
+      if (assignment) {
+        Object.assign(body, {
+          expected_assignment_id: assignment.id,
+          expected_assignment_revision: assignment.revision,
+          expected_location_revision: data.location_revision
+        });
+      }
+      const proposedBody = JSON.stringify(body);
       task(async current => {
+        if (assignment && checkedBody !== proposedBody) {
+          const result = await request(
+            endpoint() + "/shifts/" + encodeURIComponent(editing.id) +
+              "/assigned-preview",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "X-CSRF-Token": identity.csrf_token
+              },
+              body: proposedBody
+            }, current
+          );
+          if (current !== generation) return;
+          if (showChecks(result)) {
+            checkedBody = proposedBody;
+            save.textContent = "Save changes";
+            say("Changes checked. Review any warnings, then save.");
+          } else {
+            checkedBody = null;
+            say("Resolve the listed conflicts before saving.");
+          }
+          return;
+        }
+        if (assignment) {
+          const approvals = [];
+          for (const row of approvalFields) {
+            const reason = row.reason.value.trim();
+            if (!row.confirm.checked || !reason) {
+              say("Approve each warning and provide a reason.");
+              return;
+            }
+            approvals.push({rule_code: row.code, reason});
+          }
+          body.approvals = approvals;
+        }
         const path = endpoint() + "/shifts" +
-          (editing ? "/" + encodeURIComponent(editing.id) : "");
+          (editing ? "/" + encodeURIComponent(editing.id) : "") +
+          (assignment ? "/assigned-edit" : "");
         const result = await request(path, {
           method: editing ? "PATCH" : "POST",
           headers: {

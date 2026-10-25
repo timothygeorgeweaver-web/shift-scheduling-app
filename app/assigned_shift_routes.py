@@ -87,3 +87,64 @@ def edit_assigned_shift(
             raise HTTPException(status_code=422, detail=str(error)) from None
         except psycopg.Error as error:
             fail(error)
+
+
+@router.post(
+    "/locations/{location_id}/schedule-weeks/{week_id}"
+    "/shifts/{slot_id}/assigned-preview"
+)
+def preview_assigned_shift(
+    location_id: UUID, week_id: UUID, slot_id: UUID,
+    body: EditAssignedShift, token: str = Depends(mutation_token),
+):
+    # Acquire the same locks as save, but write no records.
+    from app.assignment_candidates import evaluate_inputs
+
+    with staff_connection(token, write=True) as conn:
+        try:
+            data = read_week(conn, location_id, week_id)
+            if not any(row["id"] == str(slot_id) for row in data["slots"]):
+                raise HTTPException(status_code=404, detail="Shift was not found.")
+            assignments = conn.execute(
+                "SELECT scheduling.read_schedule_assignments(%s) AS result",
+                (week_id,),
+            ).fetchone()["result"]
+            current = next(
+                (row for row in assignments if row["slot_id"] == str(slot_id)),
+                None,
+            )
+            if current is None or current["id"] != str(body.expected_assignment_id):
+                raise HTTPException(status_code=409, detail="Assignment changed.")
+            timing = calculate_shift_timing(
+                body.local_date, body.start_minute, body.end_minute,
+                ends_next_day=body.ends_next_day,
+                timezone_name=data["week"]["timezone"],
+            )
+            parameters = (
+                slot_id, current["employee_id"], body.expected_week_revision,
+                body.expected_shift_revision, body.expected_location_revision,
+                body.role_id, timing.start_utc, timing.end_utc,
+            )
+            locked = conn.execute(
+                """
+                WITH proposal AS MATERIALIZED (
+                    SELECT scheduling.read_assigned_shift_proposal(
+                        %s,%s,%s,%s,%s,%s,%s,%s
+                    ) AS inputs
+                )
+                SELECT inputs,md5(inputs::text) AS fingerprint FROM proposal
+                """, parameters,
+            ).fetchone()
+
+            inputs = locked["inputs"]
+            if inputs["current_assignment"]["revision"] != body.expected_assignment_revision:
+                raise HTTPException(status_code=409, detail="Assignment changed.")
+            policy = inputs["rest_policy"]
+            return evaluate_inputs(inputs, rest_policy={
+                key: policy[key]
+                for key in ("window_start", "window_end", "rest_minutes")
+            })
+        except ValueError as error:
+            raise HTTPException(status_code=422, detail=str(error)) from None
+        except psycopg.Error as error:
+            fail(error)

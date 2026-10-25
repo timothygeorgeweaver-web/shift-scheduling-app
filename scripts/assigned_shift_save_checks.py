@@ -104,6 +104,14 @@ def verify(database, token, location, role):
         }, json=body).status_code == 403, "Foreign origin accepted.")
         require(state() == before, "Rejected request changed records.")
 
+        preview = client.post(
+            base+"/assigned-preview", headers=headers, json=body,
+        )
+        require(preview.status_code == 200
+                and preview.json()["category"] == "eligible",
+                "Eligible assigned-edit preview failed.")
+        require(state() == before, "Preview wrote assignment or audit records.")
+
         response = client.patch(base+"/assigned-edit", headers=headers, json=body)
         require(response.status_code == 200, "Eligible assigned edit failed.")
         current = response.json()
@@ -135,6 +143,13 @@ def verify(database, token, location, role):
             FROM scheduling.employee WHERE id={literal(employee)};
         """, database)
         before = state()
+        preview = client.post(
+            base+"/assigned-preview", headers=headers, json=body,
+        )
+        require(preview.status_code == 200
+                and "unavailability" in preview.json()["warnings"],
+                "Proposed-edit preview omitted availability warning.")
+        require(state() == before, "Warning preview wrote records.")
         require(client.patch(base+"/assigned-edit", headers=headers,
                              json=body).status_code == 422,
                 "Availability warning accepted without fresh approval.")
