@@ -25,7 +25,7 @@ def install(version, database, rehearse=False):
         "0016_draft_shift_slots", "0017_edit_remove_draft_shifts",
         "0018_job_role_display_order", "0019_schedule_templates",
         "0020_manage_schedule_templates", "0021_direct_template_patterns",
-        "0022_business_day_storage"
+        "0022_business_day_storage", "0023_business_day_policy"
     ), "Unsupported migration.")
     require(
         database == "shift_scheduling"
@@ -84,6 +84,7 @@ def install(version, database, rehearse=False):
         "0019_schedule_templates": (set(), []),
         "0020_manage_schedule_templates": (set(), []),
         "0021_direct_template_patterns": (set(), []),
+        "0023_business_day_policy": (set(), []),
         "0022_business_day_storage": (
             {"location", "schedule_week", "schedule_template"},
             ["business_day_start_minute"],
@@ -185,6 +186,8 @@ def install(version, database, rehearse=False):
             "scheduling.save_template_pattern(uuid,uuid,integer,integer,text,jsonb)",
         "0022_business_day_storage":
             "scheduling.save_template_pattern(uuid,uuid,integer,integer,text,jsonb)",
+        "0023_business_day_policy":
+            "scheduling.edit_business_day_policy(uuid,integer,integer)",
     }[version]
     require(admin(f"""
         SELECT p.prosecdef

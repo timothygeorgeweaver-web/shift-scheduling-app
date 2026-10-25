@@ -52,3 +52,20 @@ installer also checks all existing business records during source migration.
 
 Next: administrator policy controls and explicit rollover capture for new
 weeks/templates, followed by planner and unavailability integration.
+
+## Administrator business-day policy API
+
+Migration 0023 adds the controlled edit_business_day_policy function.
+GET/PATCH /api/v1/staff/locations/{id}/business-day-policy are administrator-only.
+
+Writes require CSRF, an exact location revision and a quarter-hour rollover.
+Organization/location locks serialize competing edits. Policy and audit changes
+commit atomically; unchanged values cause no revision or audit changes.
+The shared location revision also invalidates stale settings/planner requests.
+
+Certification covers authorization, business isolation, validation, CSRF/origin,
+stale/concurrent edits, audit failure rollback and saved-record preservation.
+No source location policy is changed by installation.
+
+The API is staged configuration. New-week/template capture, planner activation,
+DST boundary integration and the administrator browser control remain pending.

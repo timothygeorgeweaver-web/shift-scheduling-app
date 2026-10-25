@@ -86,3 +86,51 @@ def edit_settings(
                     detail="Settings changed or are invalid. Refresh and check the details.",
                 ) from None
             raise
+
+
+class EditBusinessDayPolicy(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    expected_location_revision: StrictInt = Field(ge=1, le=2147483646)
+    business_day_start_minute: StrictInt = Field(ge=0, le=1439)
+
+    @field_validator("business_day_start_minute")
+    @classmethod
+    def valid_rollover(cls, value):
+        from app.business_day import validate_rollover
+        return validate_rollover(value)
+
+
+@router.get("/locations/{location_id}/business-day-policy")
+def read_business_day_policy(location_id: UUID, token: str = Depends(_token)):
+    with administrator_connection(token, location_id) as (conn, location, actor):
+        return conn.execute(
+            """
+            SELECT id AS location_id,revision AS location_revision,
+                   business_day_start_minute,timezone
+            FROM scheduling.location WHERE id=%s
+            """, (location_id,),
+        ).fetchone()
+
+
+@router.patch("/locations/{location_id}/business-day-policy")
+def edit_business_day_policy(
+    location_id: UUID, body: EditBusinessDayPolicy,
+    token: str = Depends(mutation_token),
+):
+    with administrator_connection(
+        token, location_id, write=True
+    ) as (conn, location, actor):
+        try:
+            return conn.execute(
+                "SELECT scheduling.edit_business_day_policy(%s,%s,%s) AS policy",
+                (location_id, body.expected_location_revision,
+                 body.business_day_start_minute),
+            ).fetchone()["policy"]
+        except psycopg.Error as error:
+            statuses = {"40001": 409, "42501": 403, "22023": 422}
+            if error.sqlstate in statuses:
+                raise HTTPException(
+                    status_code=statuses[error.sqlstate],
+                    detail="Rollover settings changed or are invalid. Refresh and try again.",
+                ) from None
+            raise

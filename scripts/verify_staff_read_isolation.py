@@ -213,6 +213,9 @@ def main():
         from scripts.verify_business_day_storage import verify as verify_rollover
         verify_rollover(test_db)
 
+        from scripts.verify_business_day_policy import verify as verify_day_policy
+        verify_day_policy(test_db, identities, locations)
+
         # These mutations affect only synthetic identities in the copy.
         admin(f"""
             BEGIN;
