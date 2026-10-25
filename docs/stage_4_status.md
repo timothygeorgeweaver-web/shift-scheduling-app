@@ -821,3 +821,22 @@ clear no-op behavior, assignment preservation and review audit rollback.
 Source assignments are unchanged by certification.
 Browser acceptance remains pending.
 Recovery inventory includes twenty-one tables and forty-one migrations.
+
+## Rest-policy changes with existing assignments
+
+Removed the temporary live-assignment restriction from rest-policy editing.
+A changed policy now queues and evaluates affected live draft assignments
+inside the same administrator transaction, using the shared review service.
+
+Assignments remain intact. Conflicts receive review status; valid assignments
+are marked clear. A review or audit failure rolls back the policy, review
+markers, results and audit history together. Unchanged policy saves do not
+produce new review records.
+
+Focused disposable checks cover changes over live assignments, immediate
+reassessment, complete failure rollback, no-op behavior and unchanged
+assignment values. No source policy values are changed by certification.
+
+Browser review acceptance and remaining assignment-edit/mixed-policy
+integration still require completion.
+Recovery inventory includes twenty-one tables and forty-two migrations.

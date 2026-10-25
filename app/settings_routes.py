@@ -174,11 +174,25 @@ def edit_rest_policy(
         token, location_id, write=True
     ) as (conn, location, actor):
         try:
-            return conn.execute(
+            policy = conn.execute(
                 "SELECT scheduling.edit_rest_policy(%s,%s,%s,%s,%s) AS policy",
                 (location_id, body.expected_location_revision,
                  body.window_start, body.window_end, body.rest_minutes),
             ).fetchone()["policy"]
+            if policy["location_revision"] != body.expected_location_revision:
+                from app.assignment_review_service import review_week_locked
+                weeks = conn.execute(
+                    "SELECT scheduling.assignment_review_weeks(%s) AS result",
+                    (location_id,),
+                ).fetchone()["result"]
+                for week in weeks:
+                    review_week_locked(
+                        conn, location_id, week["id"], week["revision"],
+                        policy["location_revision"],
+                    )
+            return policy
+        except ValueError as error:
+            raise HTTPException(status_code=409, detail=str(error)) from None
         except psycopg.Error as error:
             statuses = {"40001": 409, "42501": 403, "22023": 422, "55000": 423}
             if error.sqlstate in statuses:
