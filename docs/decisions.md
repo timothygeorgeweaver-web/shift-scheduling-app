@@ -171,3 +171,12 @@ An insertion failure must restore all previous shifts.
 
 Month controls should align with the calendar instead of the full workspace.
 Next Day appears on a separate line beneath planner clock times.
+
+## Unfilled published shifts approved October 25, 2026
+
+The owner approved publishing a schedule with unassigned shift slots after
+a clear warning and explicit confirmation. Those slots remain visibly marked
+Unfilled in the published team roster.
+
+Unfilled coverage does not waive hard assignment restrictions or the
+requirement for current, documented approvals of soft assignment warnings.

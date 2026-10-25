@@ -23,6 +23,24 @@ Next:
 - Staged amendments and explicit republishing with prior versions retained.
 - Browser acceptance, security/integration certification and recovery.
 
-Before enabling publication, confirm whether unassigned shifts may be published.
-The saved V1 plan proposes allowing them with visible Unfilled status; this
-remains a proposal rather than a recorded owner decision.
+The owner approved publication with unassigned shifts after a clear warning
+and explicit confirmation. Published rosters must display those slots as Unfilled.
+
+
+## Immutable publication storage
+
+Migration 0047 adds tenant-scoped publication records with sequential version
+uniqueness per week, saved source revisions, actor/time and roster snapshots.
+Updates and deletion are rejected by an immutable-history trigger.
+
+Staff history reads reuse existing authenticated week authorization and expose
+version metadata. Employee-only accounts and invalid sessions are denied.
+The runtime has no direct publication-table privileges.
+
+Disposable certification covers history order, duplicate-version denial,
+immutability and staff authorization. Installation creates an empty table;
+it does not publish any real schedule.
+
+Publication validation/commit, availability locks, employee-safe roster reads
+and amendment integration remain pending.
+Recovery inventory: 22 tables and 47 reviewed migrations.

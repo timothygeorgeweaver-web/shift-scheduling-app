@@ -48,7 +48,8 @@ def install(version, database, rehearse=False):
         "0043_target_assignment_rechecks",
         "0044_assigned_shift_proposal",
         "0045_commit_assigned_shift_edit",
-        "0046_assignment_warning_visibility"
+        "0046_assignment_warning_visibility",
+        "0047_schedule_publications"
     ), "Unsupported migration.")
     require(
         database == "shift_scheduling"
@@ -130,6 +131,7 @@ def install(version, database, rehearse=False):
         "0044_assigned_shift_proposal": (set(), []),
         "0045_commit_assigned_shift_edit": (set(), []),
         "0046_assignment_warning_visibility": (set(), []),
+        "0047_schedule_publications": (set(), []),
         "0032_assignment_rest_policy": ({"location"}, [
             "rest_window_start_minute", "rest_window_end_minute",
             "minimum_rest_minutes",
@@ -200,6 +202,13 @@ def install(version, database, rehearse=False):
                 "Unexpected assignment review tables.")
         require(after["data"]["assignment_review_event"]["rows"] == 0,
                 "Migration unexpectedly seeded review history.")
+    if version == "0047_schedule_publications":
+        require(
+            set(after["data"])-set(before["data"]) == {"schedule_publication"},
+            "Unexpected publication storage tables.",
+        )
+        require(after["data"]["schedule_publication"]["rows"] == 0,
+                "Migration unexpectedly published schedules.")
     for table, value in before["data"].items():
         if table not in stripped | {"schema_migration"}:
             require(after["data"][table] == value,
@@ -214,6 +223,8 @@ def install(version, database, rehearse=False):
         require(actual == expected, "Existing records changed during migration.")
 
     signature = {
+        "0047_schedule_publications":
+            "scheduling.read_schedule_publication_history(uuid)",
         "0046_assignment_warning_visibility":
             "scheduling.read_schedule_assignments(uuid)",
         "0045_commit_assigned_shift_edit":
