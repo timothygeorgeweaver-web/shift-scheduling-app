@@ -497,3 +497,21 @@ migrations.
 
 Administrator policy editing, policy-change review of existing assignments,
 and protected assignment commits remain pending.
+
+## Read-only candidate API
+
+Added a staff-only draft-shift candidate endpoint grouping same-location
+employees as eligible, override required, or blocked. Each request uses a
+read-only repeatable-read transaction and current saved location rest policy.
+
+Responses include classification reasons and relevant revisions, with
+Cache-Control no-store. Raw personal blocked intervals and neighboring
+assignment intervals remain internal.
+
+Focused PostgreSQL HTTP checks cover fresh qualification and availability
+changes, inactive employees, policy revisions, unknown location/shift denial,
+employee-only denial, privacy projection, and absence of assignment writes.
+
+No browser assignment control or assignment mutation is enabled yet.
+Administrator rest-policy editing, mixed-policy reconciliation, protected
+assignment commits and affected-assignment review remain pending.

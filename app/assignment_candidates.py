@@ -99,3 +99,18 @@ def read_candidate(conn, slot_id, employee_id, *, rest_policy):
         (slot_id, employee_id),
     ).fetchone()["result"]
     return evaluate_inputs(data, rest_policy=rest_policy)
+
+
+def read_saved_candidate(conn, slot_id, employee_id):
+    """Evaluate fresh inputs using the persisted location rest policy."""
+    data = conn.execute(
+        "SELECT scheduling.read_assignment_inputs(%s,%s) AS result",
+        (slot_id, employee_id),
+    ).fetchone()["result"]
+    saved = data["rest_policy"]
+    result = evaluate_inputs(data, rest_policy={
+        name: saved[name]
+        for name in ("window_start", "window_end", "rest_minutes")
+    })
+    result["location_revision"] = saved["location_revision"]
+    return result

@@ -10,9 +10,12 @@ from app.security import session_token_digest
 
 
 @contextmanager
-def staff_connection(token: str, write: bool = False):
+def staff_connection(token: str, write: bool = False, *, repeatable_read: bool = False):
     with connection() as conn:
         conn.read_only = not write
+        if repeatable_read:
+            from psycopg import IsolationLevel
+            conn.isolation_level = IsolationLevel.REPEATABLE_READ
         conn.row_factory = dict_row
         digest = session_token_digest(token)
         conn.execute(

@@ -51,6 +51,8 @@ from app.schedule_week_routes import router as schedule_week_router
 app.include_router(schedule_week_router)
 from app.shift_routes import router as shift_router
 app.include_router(shift_router)
+from app.assignment_candidate_routes import router as assignment_candidate_router
+app.include_router(assignment_candidate_router)
 from app.schedule_copy_routes import router as schedule_copy_router
 app.include_router(schedule_copy_router)
 from app.schedule_template_routes import router as schedule_template_router
