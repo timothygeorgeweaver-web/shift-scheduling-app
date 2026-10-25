@@ -130,7 +130,7 @@ def test_changed_hard_requirements_are_flagged(field, code):
     assert code in review_assignment(data).hard_blocks
 
 
-def test_mixed_saved_business_days_require_explicit_review():
+def test_unrelated_saved_business_days_do_not_create_false_conflicts():
     data = fixture()
     row = neighbor(
         "2026-10-25T15:00:00+00:00",
@@ -139,8 +139,8 @@ def test_mixed_saved_business_days_require_explicit_review():
     row["business_day_start_minute"] = 0
     data["assigned"] = [row]
     result = review_assignment(data)
-    assert result.needs_review
-    assert result.review_reasons == ("saved_business_day_policy_mismatch",)
+    assert not result.needs_review
+    assert result.review_reasons == ()
 
 
 def test_missing_or_wrong_assignment_is_rejected():

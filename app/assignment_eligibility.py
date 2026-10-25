@@ -27,7 +27,7 @@ def evaluate_assignment(candidate, assigned=(), unavailable=(), *,
                         employee_active, role_active, qualified,
                         timezone_name, rollover_minute=300,
                         rest_window_start=1200, rest_window_end=360,
-                        rest_minutes=720):
+                        rest_minutes=720, assigned_policies=None):
     """Evaluate one proposed interval under one explicit business-day policy.
 
     assigned contains this employee's other active assignments across roles
@@ -38,6 +38,19 @@ def evaluate_assignment(candidate, assigned=(), unavailable=(), *,
     if not isinstance(candidate, Interval):
         raise ValueError("Supply a validated candidate interval.")
     assigned, unavailable = tuple(assigned), tuple(unavailable)
+    if assigned_policies is None:
+        assigned_policies = tuple({
+            "timezone_name": timezone_name,
+            "rollover_minute": rollover_minute,
+        } for _ in assigned)
+    else:
+        assigned_policies = tuple(assigned_policies)
+        if len(assigned_policies) != len(assigned):
+            raise ValueError("Supply one saved policy per neighboring assignment.")
+        if any(not isinstance(policy, dict) or set(policy) != {
+            "timezone_name", "rollover_minute",
+        } for policy in assigned_policies):
+            raise ValueError("Supply complete saved assignment policies.")
     if any(not isinstance(value, Interval) for value in assigned+unavailable):
         raise ValueError("Supply validated assignment and unavailability intervals.")
     if any(type(value) is not bool for value in (employee_active, role_active, qualified)):
@@ -74,8 +87,8 @@ def evaluate_assignment(candidate, assigned=(), unavailable=(), *,
     policy = dict(timezone_name=timezone_name, rollover_minute=rollover_minute)
     daily = {row.business_date: row.estimated_work_minutes for row in
              allocate_shift_labor(candidate.start, candidate.end, **policy)}
-    for other in assigned:
-        for row in allocate_shift_labor(other.start, other.end, **policy):
+    for other, saved_policy in zip(assigned, assigned_policies):
+        for row in allocate_shift_labor(other.start, other.end, **saved_policy):
             if row.business_date in daily:
                 daily[row.business_date] += row.estimated_work_minutes
     if any(minutes > 480 for minutes in daily.values()):

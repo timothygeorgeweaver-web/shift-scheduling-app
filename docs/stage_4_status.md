@@ -863,3 +863,19 @@ resolution, read-only behavior, distant-assignment exclusion and affected
 same-day hours. Rest-policy saves retain their atomic reassessment path.
 Source assignments and policy values are unchanged by certification.
 Recovery inventory includes twenty-one tables and forty-three migrations.
+
+## Assignments spanning saved business-day policies
+
+Each shift's estimated labor is allocated using its own saved week's timezone
+and rollover. Matching business-date labels combine for daily-hour warnings.
+Changing a location policy does not move previously saved labor between dates.
+
+Overlap and elapsed-rest checks continue to compare actual shift instants.
+Different saved business-day policies alone no longer block assignment or
+create an assignment-review warning. Invalid policy inputs still fail closed.
+
+The shared engine supplies candidate lists, assignment commits, proposed
+assigned-shift edits and automatic reassessment. Focused tests cover saved
+rollover/timezone grouping, exact proportional meal allocation, real overlap,
+insufficient rest and missing policy data. No stored timestamps, assignments,
+approvals or policy values are modified by this code change.

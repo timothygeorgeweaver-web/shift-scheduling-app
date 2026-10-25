@@ -16,25 +16,19 @@ def _interval(row):
 
 
 def evaluate_inputs(data, *, rest_policy):
-    """Evaluate one authorized snapshot with an explicit validated rest policy.
+    """Evaluate fresh inputs while preserving each week's saved labor policy.
 
-    Business-day totals use the proposed shift's saved week policy.
-    Neighboring assignments must have matching saved timezone and rollover
-    semantics until mixed-policy reconciliation is implemented. Fail closed
-    rather than silently reclassify previously saved labor.
+    Actual instants determine overlap and elapsed rest. Daily labor for each
+    neighboring shift uses that shift's saved timezone and rollover; only
+    matching business-date labels contribute to the proposed shift's totals.
     """
     week = data["week"]
     candidate = _interval(data["slot"])
-    assigned = []
-    for row in data["assigned"]:
-        if (row["timezone"] != week["timezone"]
-                or row["business_day_start_minute"]
-                != week["business_day_start_minute"]):
-            raise ValueError(
-                "Neighboring assignments use different saved business-day "
-                "policies; reconcile those policies before assigning."
-            )
-        assigned.append(_interval(row))
+    assigned = [_interval(row) for row in data["assigned"]]
+    assigned_policies = [{
+        "timezone_name": row["timezone"],
+        "rollover_minute": row["business_day_start_minute"],
+    } for row in data["assigned"]]
 
     effective = {}
     for row in data["calendar_days"]:
@@ -64,6 +58,7 @@ def evaluate_inputs(data, *, rest_policy):
         rest_window_start=rest_policy["window_start"],
         rest_window_end=rest_policy["window_end"],
         rest_minutes=rest_policy["rest_minutes"],
+        assigned_policies=assigned_policies,
     )
 
     # Never include raw personal availability or neighboring shift intervals.

@@ -127,7 +127,7 @@ def test_other_role_hours_are_added():
     assert "daily_hours" in evaluate(data)["warnings"]
 
 
-def test_mixed_saved_rollovers_fail_explicitly():
+def test_unrelated_saved_rollover_does_not_block_assignment():
     data = fixture()
     row = neighbor(
         "2026-10-25T15:00:00+00:00",
@@ -135,8 +135,9 @@ def test_mixed_saved_rollovers_fail_explicitly():
     )
     row["business_day_start_minute"] = 0
     data["assigned"] = [row]
-    with pytest.raises(ValueError, match="different saved"):
-        evaluate(data)
+    result = evaluate(data)
+    assert result["category"] == "eligible"
+    assert result["warnings"] == []
 
 
 def test_duplicate_or_missing_effective_dates_fail():

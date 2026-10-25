@@ -45,22 +45,10 @@ def review_assignment(inputs, *, proposed_rest_policy=None):
         raise ValueError("Supply the complete rest policy.")
 
     week = inputs["week"]
-    mismatch = any(
-        row["timezone"] != week["timezone"]
-        or row["business_day_start_minute"]
-        != week["business_day_start_minute"]
-        for row in inputs["assigned"]
-    )
-
-    if mismatch:
-        # Do not silently reinterpret historical business-day labor.
-        hard, warnings = (), ()
-        reasons = ("saved_business_day_policy_mismatch",)
-    else:
-        result = evaluate_inputs(inputs, rest_policy=policy)
-        hard = tuple(result["hard_blocks"])
-        warnings = tuple(result["warnings"])
-        reasons = ()
+    result = evaluate_inputs(inputs, rest_policy=policy)
+    hard = tuple(result["hard_blocks"])
+    warnings = tuple(result["warnings"])
+    reasons = ()
 
     return AssignmentReview(
         assignment_id=str(current["id"]),
