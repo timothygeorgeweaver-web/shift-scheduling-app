@@ -747,3 +747,17 @@ cancellation, duplicate prevention and owner-removal cleanup.
 Owner browser acceptance remains pending.
 
 Browser-controlled tab-close/reload warnings remain unchanged.
+
+## Administrator rest-policy browser controls
+
+Added Rest between shifts to administrator Team settings. Ending-time window
+and elapsed rest duration use fifteen-minute dropdowns, with a live preview
+and the approved defaults.
+
+Saving uses the protected rest-policy API and shared location revision.
+Save is disabled while a scheduling, assigning or template editor is open.
+Successful saves refresh Team and the schedule calendar.
+
+The server still requires assignment review before changing policy over
+live assignments. No policy values are changed by this update.
+Browser acceptance remains pending.

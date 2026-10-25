@@ -124,7 +124,7 @@ export function createScheduleManager({api, expired, onEditorOpen = () => {}}) {
       copySource = null;
       task(async () => {
         await load(selected);
-        say("Business-day rollover updated. Calendar refreshed.");
+        say("Workplace policy updated. Calendar refreshed.");
       });
     }
     function updateLocks() {

@@ -8,6 +8,7 @@ export function createStaffManager({api, expired, onBusinessDaySaved = () => {}}
   document.getElementById("account-view").append(root);
   let generation = 0, scheduleEditorOpen = false;
   let refreshRolloverLock = () => {};
+  let refreshRestLock = () => {};
 
   function element(tag, text = "", className = "") {
     const node = document.createElement(tag);
@@ -19,6 +20,7 @@ export function createStaffManager({api, expired, onBusinessDaySaved = () => {}}
   function reset() {
     generation += 1;
     refreshRolloverLock = () => {};
+    refreshRestLock = () => {};
     root.replaceChildren();
     root.hidden = true;
   }
@@ -76,8 +78,18 @@ export function createStaffManager({api, expired, onBusinessDaySaved = () => {}}
           409: "The record changed, account details conflict, or the last active administrator would be removed. Refresh and check the details.",
           422: "Check the form fields. Account passwords require 12–1,024 characters.",
         };
-        throw new Error(messages[response.status] ||
-          "The request could not be completed. Refresh before trying again.");
+        const restMessages = {
+          409: "Workplace settings changed. Refresh Team before saving again.",
+          422: "Choose valid fifteen-minute increments for the rest policy.",
+          423: "Existing assignments require review before changing the rest policy."
+        };
+        const error = new Error(
+          (path.endsWith("/rest-policy") ? restMessages[response.status] : null) ||
+          messages[response.status] ||
+          "The request could not be completed. Refresh before trying again."
+        );
+        error.status = response.status;
+        throw error;
       }
       return response.json();
     }
@@ -89,6 +101,7 @@ export function createStaffManager({api, expired, onBusinessDaySaved = () => {}}
         node.disabled = value;
       });
       refreshRolloverLock();
+      refreshRestLock();
     }
 
     async function run(work) {
@@ -141,7 +154,8 @@ export function createStaffManager({api, expired, onBusinessDaySaved = () => {}}
 
     async function save(path, method, body) {
       const saved = await request(path, method, body);
-      if (path.endsWith("/business-day-policy") && alive()) {
+      if ((path.endsWith("/business-day-policy") ||
+           path.endsWith("/rest-policy")) && alive()) {
         onBusinessDaySaved(saved.location_id);
       }
       if (path.endsWith("/settings") && alive()) {
@@ -433,6 +447,109 @@ export function createStaffManager({api, expired, onBusinessDaySaved = () => {}}
       return panel;
     }
 
+    function restPolicyControls() {
+      const panel = document.createElement("details");
+      panel.append(element("summary", "Rest between shifts"));
+      const container = document.createElement("div");
+      const opener = element("button", "Edit rest policy", "button secondary");
+      opener.type = "button";
+      container.append(opener);
+      panel.append(container);
+
+      opener.addEventListener("click", () => run(async () => {
+        const path = base() + "rest-policy";
+        const policy = await request(path);
+        if (!alive()) return;
+
+        const form = document.createElement("form");
+        const fields = document.createElement("fieldset");
+        fields.append(element("legend", "Rest between shifts"));
+        const clock = minute =>
+          String(Math.floor(minute / 60)).padStart(2, "0") + ":" +
+          String(minute % 60).padStart(2, "0");
+        const duration = minute => {
+          const hours = Math.floor(minute / 60), remainder = minute % 60;
+          return remainder ? `${hours}h ${remainder}m` : `${hours}h`;
+        };
+        function selectMinutes(value, maximum, format) {
+          const select = document.createElement("select");
+          select.required = true;
+          for (let minute = 0; minute <= maximum; minute += 15) {
+            const option = element("option", format(minute));
+            option.value = String(minute);
+            select.append(option);
+          }
+          select.value = String(value);
+          return select;
+        }
+        const start = selectMinutes(policy.window_start, 1425, clock);
+        const end = selectMinutes(policy.window_end, 1425, clock);
+        const rest = selectMinutes(policy.rest_minutes, 1440, duration);
+        fields.append(
+          field("Shift-ending window starts at (24-hour time)", start),
+          field("Shift-ending window ends at (24-hour time)", end),
+          field("Required time before the next shift", rest)
+        );
+        const preview = element("p", "", "description");
+        function updatePreview() {
+          preview.textContent =
+            `Shifts ending from ${clock(Number(start.value))} through ` +
+            `${clock(Number(end.value))}, including both endpoints, require ` +
+            `${duration(Number(rest.value))} before the next shift. ` +
+            (Number(start.value) > Number(end.value)
+              ? "This ending-time window crosses midnight. " : "") +
+            "Rest is measured as elapsed time.";
+        }
+        for (const select of [start, end, rest]) {
+          select.addEventListener("change", updatePreview);
+        }
+        updatePreview();
+        fields.append(preview);
+        fields.append(element("p",
+          "Default: shifts ending from 20:00 through 06:00 require 12 hours of rest.",
+          "description"));
+
+        const saveButton = submit("Save rest policy");
+        const notice = element("span",
+          "Please close the open planner, assigner or template before saving.",
+          "rollover-save-notice");
+        notice.setAttribute("role", "status");
+        const message = element("p", "", "team-status");
+        message.setAttribute("role", "status");
+        fields.append(saveButton, notice, message);
+        form.append(fields);
+        let blocked = false;
+
+        refreshRestLock = () => {
+          if (!alive() || !form.isConnected) return;
+          saveButton.disabled = busy || blocked || scheduleEditorOpen;
+          notice.hidden = !scheduleEditorOpen;
+        };
+        form.addEventListener("submit", event => {
+          event.preventDefault();
+          if (busy || blocked || scheduleEditorOpen || !form.reportValidity()) return;
+          run(async () => {
+            try {
+              await save(path, "PATCH", {
+                expected_location_revision: policy.location_revision,
+                window_start: Number(start.value),
+                window_end: Number(end.value),
+                rest_minutes: Number(rest.value)
+              });
+            } catch (error) {
+              blocked = error.status !== 422;
+              message.textContent = error.message;
+              throw error;
+            }
+          });
+        });
+        container.replaceChildren(form);
+        refreshRestLock();
+        status.textContent = "";
+      }));
+      return panel;
+    }
+
     function availabilityPolicyControls() {
       const panel = document.createElement("details");
       panel.append(element("summary", "Availability deadlines"));
@@ -606,7 +723,8 @@ export function createStaffManager({api, expired, onBusinessDaySaved = () => {}}
       if (!alive()) return;
       const fragment = document.createDocumentFragment();
       if (location.selectedOptions[0]?.dataset.admin === "true") {
-        fragment.append(settingsControls(), businessDayControls(), availabilityPolicyControls());
+        fragment.append(settingsControls(), businessDayControls(),
+          restPolicyControls(), availabilityPolicyControls());
       }
       const columns = element("div", "", "team-columns");
       const staff = element("section");
@@ -725,6 +843,7 @@ export function createStaffManager({api, expired, onBusinessDaySaved = () => {}}
     setScheduleEditorOpen(value) {
       scheduleEditorOpen = Boolean(value);
       refreshRolloverLock();
+      refreshRestLock();
     }
   };
 }
