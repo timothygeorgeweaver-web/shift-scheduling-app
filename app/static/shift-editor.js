@@ -1,4 +1,5 @@
 import {node, action, addDays, weekday} from "/static/planner-grid.js?v=2";
+import {createAssignmentControls} from "/static/assignment-controls.js?v=1";
 import {createScheduleGrid, clockMinute} from "/static/schedule-grid.js?v=6";
 import {businessDateForLocal, calendarDateForCell} from "/static/business-day.js?v=1";
 
@@ -10,6 +11,7 @@ export function createShiftEditor({api, expired, identity, parent, onOpen}) {
   let generation = 0, busy = false, data = null, roles = [];
   let location = "", weekId = "", dirty = false, needsRefresh = false;
   let selectedStart = null, plannerScroll = 1408;
+  let assignmentDirty = false;
   let popup = null, popupMessage = null, popupAnchor = null;
   let status, content, controls, closeButton, refreshButton, inputFields;
 
@@ -27,6 +29,7 @@ export function createShiftEditor({api, expired, identity, parent, onOpen}) {
     selectedStart = null;
     plannerScroll = 1408;
     dirty = false;
+    assignmentDirty = false;
     needsRefresh = false;
     root.replaceChildren();
     root.hidden = true;
@@ -34,11 +37,12 @@ export function createShiftEditor({api, expired, identity, parent, onOpen}) {
   }
 
   function canClose() {
-    return !busy && (!dirty || window.confirm("Discard the unsaved shift?"));
+    return !busy && (!(dirty || assignmentDirty) ||
+      window.confirm("Discard unsaved shift or assignment changes?"));
   }
 
   const unload = event => {
-    if (dirty) { event.preventDefault(); event.returnValue = ""; }
+    if (dirty || assignmentDirty) { event.preventDefault(); event.returnValue = ""; }
   };
   window.addEventListener("beforeunload", unload);
 
@@ -109,6 +113,7 @@ export function createShiftEditor({api, expired, identity, parent, onOpen}) {
     needsRefresh = false;
     selectedStart = null;
     dirty = false;
+    assignmentDirty = false;
     render();
     say("Schedule loaded.");
   }
@@ -129,6 +134,7 @@ export function createShiftEditor({api, expired, identity, parent, onOpen}) {
     if (!canClose()) return;
     selectedStart = null;
     dirty = false;
+    assignmentDirty = false;
     render();
     say("Shift entry closed.");
   }
@@ -211,7 +217,7 @@ export function createShiftEditor({api, expired, identity, parent, onOpen}) {
     node("summary", "Shift counts by starting business day and job type", details);
     node("p",
       "Counts use the business day on which each shift starts. " +
-      "These are coverage slots; employee assignments come in the next stage.",
+      "Counts include assigned and unassigned coverage slots.",
       details);
     const table = node("table", "", details);
     table.className = "schedule-summary";
@@ -258,7 +264,7 @@ export function createShiftEditor({api, expired, identity, parent, onOpen}) {
     node("h3", `${week.week_start_date} – ${addDays(week.week_start_date, 6)}`, content);
     node("p", `${week.state.charAt(0).toUpperCase() + week.state.slice(1)} · ${week.timezone}`, content);
     node("p",
-      `${data.slots.length} unassigned shifts · ${hours(data.slots.reduce(
+      `${data.slots.length} shifts · ${(data.assignments ?? []).length} assigned · ${hours(data.slots.reduce(
         (sum, slot) => sum + slot.estimated_work_minutes, 0
       ))} estimated coverage`, content);
 
@@ -420,10 +426,7 @@ export function createShiftEditor({api, expired, identity, parent, onOpen}) {
             }, current
           );
           if (current !== generation) return;
-          data = result;
-          selectedStart = null;
-          dirty = false;
-          render();
+          await load(current);
           say("Shift deleted from the planner.");
         });
       });
@@ -469,13 +472,37 @@ export function createShiftEditor({api, expired, identity, parent, onOpen}) {
           body: JSON.stringify(body)
         }, current);
         if (current !== generation) return;
-        data = result;
-        selectedStart = null;
-        dirty = false;
-        render();
+        await load(current);
         say(editing ? "Shift changes saved." : "Shift added.");
       });
     });
+    if (editing) {
+      const assignment = (data.assignments ?? []).find(
+        value => value.slot_id === editing.id
+      ) ?? null;
+      createAssignmentControls({
+        parent: popup,
+        endpoint: endpoint() + "/shifts/" + encodeURIComponent(editing.id),
+        shift: editing,
+        assignment,
+        weekRevision: data.week.revision,
+        request: (path, options, current) => request(path, {
+          ...options,
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRF-Token": identity.csrf_token
+          }
+        }, current),
+        run: task,
+        canEdit: () => !busy && !needsRefresh && !dirty,
+        markDirty: () => { assignmentDirty = true; },
+        onSaved: async current => {
+          assignmentDirty = false;
+          await load(current);
+        },
+        say
+      });
+    }
     presentPopup();
   }
 

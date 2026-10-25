@@ -559,3 +559,14 @@ dialog.shift-popup {
 .unavailability-planner-area { min-width: 0; }
 .unavailability-planner-area[hidden] { display: none; }
 .unavailability .planner-visibility { margin: 12px 0; }
+
+.assignment-panel {
+  border-top: 1px solid #cbd5e1;
+  margin-top: 1rem;
+  padding-top: .75rem;
+}
+.assignment-panel h4 { margin: 0 0 .5rem; }
+.assignment-panel select,
+.assignment-panel textarea { width: 100%; box-sizing: border-box; }
+.assignment-panel fieldset { min-width: 0; }
+.assignment-panel button { margin: .25rem .25rem .25rem 0; }

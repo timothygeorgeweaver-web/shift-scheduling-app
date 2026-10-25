@@ -659,3 +659,19 @@ when the final unassignment audit insert fails.
 Browser assignment controls and the remaining assignment review/edit
 integration are pending. No source assignments are changed by certification.
 Recovery inventory includes twenty tables and thirty-eight migrations.
+
+## Browser assignment controls
+
+Saved shift windows now include employee candidate loading, grouped
+eligibility, blocked-rule explanations, per-warning confirmation and reason
+fields, explicit replacement confirmation, and unassignment.
+
+Controls use the protected candidate/save/unassign APIs and refresh the week
+after confirmed writes. Assignment changes participate in unsaved-change
+prompts. Raw personal blocked intervals are not displayed.
+
+Week summaries distinguish total and assigned shift counts. Shift cards
+remain job-type-only. Existing pattern/template reads remain separate from
+assignee summaries.
+
+Static asset checks passed. Owner browser acceptance remains pending.
