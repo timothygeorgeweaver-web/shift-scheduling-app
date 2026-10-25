@@ -840,3 +840,26 @@ assignment values. No source policy values are changed by certification.
 Browser review acceptance and remaining assignment-edit/mixed-policy
 integration still require completion.
 Recovery inventory includes twenty-one tables and forty-two migrations.
+
+## Targeted automatic assignment warnings
+
+Removed Review assignments from the assigner. Normal draft-week detail reads
+now reassess only assignments with stored pending/conflict markers, using a
+consistent read-only snapshot. Clear assignments require no additional
+eligibility read. Projection writes no audit or review history.
+
+Relevant dependency changes still create markers so newly introduced
+conflicts are detected. Assignment-change markers are limited to the same
+employee's shifts within the maximum supported rest neighborhood or sharing
+relevant business-day hours, rather than unrelated weeks.
+
+Warning labels now distinguish Violates Rest Policy, Violates Daily Hours
+Policy and Availability Review Required, with specific labels for other hard
+eligibility conflicts. Resolved warnings clear on the next normal view load.
+There is no polling or periodic whole-schedule reassessment.
+
+Focused disposable checks cover automatic availability warnings and
+resolution, read-only behavior, distant-assignment exclusion and affected
+same-day hours. Rest-policy saves retain their atomic reassessment path.
+Source assignments and policy values are unchanged by certification.
+Recovery inventory includes twenty-one tables and forty-three migrations.

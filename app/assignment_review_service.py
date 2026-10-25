@@ -61,3 +61,28 @@ def review_week_locked(conn, location_id, week_id,
         ),
         "assignments": current,
     }
+
+
+def project_review_indicators(conn, assignments):
+    """Read-only checks for flagged assignments in the displayed week.
+
+    Clear assignments require no additional input read or evaluation.
+    This projection writes no review history or audit events.
+    """
+    projected = []
+    for assignment in assignments:
+        row = dict(assignment)
+        if row["review_status"] != "clear":
+            inputs = conn.execute(
+                "SELECT scheduling.read_assignment_inputs(%s,%s) AS result",
+                (row["slot_id"], row["employee_id"]),
+            ).fetchone()["result"]
+            report = review_assignment(inputs)
+            row.update(
+                review_status="needs_review" if report.needs_review else "clear",
+                review_hard_blocks=list(report.hard_blocks),
+                review_warnings=list(report.warnings),
+                review_reasons=list(report.review_reasons),
+            )
+        projected.append(row)
+    return projected

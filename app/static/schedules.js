@@ -1,7 +1,7 @@
 import {confirmAction} from "/static/confirm-dialog.js?v=1";
 import {node, action, addDays, weekday} from "/static/planner-grid.js?v=2";
 import {createShiftEditor} from "/static/shift-editor.js?v=13";
-import {createAssignmentEditor} from "/static/assignment-editor.js?v=5";
+import {createAssignmentEditor} from "/static/assignment-editor.js?v=6";
 import {askTemplateName} from "/static/template-name-dialog.js?v=2";
 import {createTemplateEditor} from "/static/template-editor.js?v=5";
 import {askTemplateApplication} from "/static/template-apply-dialog.js?v=1";

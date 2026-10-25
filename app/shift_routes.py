@@ -57,7 +57,7 @@ def read_week(conn, location_id, week_id):
 def schedule_detail(
     location_id: UUID, week_id: UUID, token: str = Depends(_token),
 ):
-    with staff_connection(token) as conn:
+    with staff_connection(token, repeatable_read=True) as conn:
         try:
             result = read_week(conn, location_id, week_id)
             result["assignments"] = conn.execute(
@@ -68,6 +68,11 @@ def schedule_detail(
                 "SELECT revision FROM scheduling.location WHERE id=%s",
                 (location_id,),
             ).fetchone()["revision"]
+            if result["week"]["state"] == "draft":
+                from app.assignment_review_service import project_review_indicators
+                result["assignments"] = project_review_indicators(
+                    conn, result["assignments"],
+                )
             return result
         except psycopg.Error as error:
             fail(error)
