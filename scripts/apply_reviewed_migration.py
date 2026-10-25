@@ -49,7 +49,8 @@ def install(version, database, rehearse=False):
         "0044_assigned_shift_proposal",
         "0045_commit_assigned_shift_edit",
         "0046_assignment_warning_visibility",
-        "0047_schedule_publications"
+        "0047_schedule_publications",
+        "0048_publication_review_scope"
     ), "Unsupported migration.")
     require(
         database == "shift_scheduling"
@@ -132,6 +133,7 @@ def install(version, database, rehearse=False):
         "0045_commit_assigned_shift_edit": (set(), []),
         "0046_assignment_warning_visibility": (set(), []),
         "0047_schedule_publications": (set(), []),
+        "0048_publication_review_scope": (set(), []),
         "0032_assignment_rest_policy": ({"location"}, [
             "rest_window_start_minute", "rest_window_end_minute",
             "minimum_rest_minutes",
@@ -223,6 +225,8 @@ def install(version, database, rehearse=False):
         require(actual == expected, "Existing records changed during migration.")
 
     signature = {
+        "0048_publication_review_scope":
+            "scheduling.lock_publication_scope(uuid,uuid,integer,integer,integer)",
         "0047_schedule_publications":
             "scheduling.read_schedule_publication_history(uuid)",
         "0046_assignment_warning_visibility":

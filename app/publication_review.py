@@ -77,7 +77,12 @@ def review_publication(data):
     assignments = {row["slot_id"]: row for row in data["assignments"]}
     slots = {row["id"]: row for row in data["slots"]}
     visited = set()
-    conflicts, warnings = [], []
+    conflicts = [{
+        "slot_id": slot_id,
+        "employee_id": assignments.get(slot_id, {}).get("employee_id"),
+        "rule_codes": ["inactive_role"],
+    } for slot_id in data.get("inactive_role_slot_ids", [])]
+    warnings = []
 
     for inputs in data["assignment_inputs"]:
         slot_id = inputs["slot"]["id"]

@@ -94,3 +94,6 @@ def ready() -> dict[str, str]:
 
 from app.assigned_shift_routes import router as assigned_shift_router
 app.include_router(assigned_shift_router)
+
+from app.publication_routes import router as publication_router
+app.include_router(publication_router)

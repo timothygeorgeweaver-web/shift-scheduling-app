@@ -63,3 +63,24 @@ a separate explicit confirmation.
 The future protected database reader must supply approval freshness evidence
 and complete assignment inputs under appropriate transaction locks. No HTTP
 publication endpoint or database publication writer is enabled by this step.
+
+## Locked publication review API
+
+Added a CSRF-protected staff publication-review endpoint backed by organization,
+location, week, shift, assignment, employee, role and actor authorization locks.
+It reads all current assignment inputs, private approvals, saved role order and
+the latest publication number before applying the shared review rules.
+
+Availability approvals are invalidated by relevant later availability events.
+Daily-hours approvals must match exact current totals; replacing a neighboring
+assignment with unchanged hours does not create circular approval invalidation.
+Fresh hard checks and saved-policy matching remain mandatory.
+
+Inactive job types block publication even on unassigned coverage slots.
+HTTP results omit private approval reasons and personal availability intervals.
+Reviews publish nothing and write no audit or review history.
+
+Focused certification covers current/stale approvals, changed qualifications,
+privacy, CSRF/origin, revision and role guards, and two-connection serialization.
+Publication commit, availability freezing and employee roster delivery are next.
+Recovery inventory: 22 tables and 48 reviewed migrations.
