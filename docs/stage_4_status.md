@@ -374,3 +374,25 @@ state after rejection, and valid 05:00 weeks with 23/25 elapsed-hour shifts.
 Existing saved policies and shift endpoints remain unchanged.
 
 Employee eligibility and assignment persistence are next.
+
+## Shared employee eligibility rules
+
+The pure eligibility engine classifies candidates as eligible,
+override_required or blocked.
+
+Hard reasons include inactive employee/role, missing qualification, overlap and
+insufficient rest before/after the candidate. Both chronological neighbors are
+checked using actual instants, including across week and DST boundaries.
+
+Warnings include any intersection with effective unavailability over the full
+shift and more than eight estimated working hours on a business day.
+Labor totals include the candidate and supplied existing assignments across
+roles, with exact proportional meal allocation and no intermediate rounding.
+
+The evaluator accepts an explicit timezone/rollover/rest policy. Persistence
+must supply fresh authorized assignments, qualification and effective blocked
+intervals, exclude a replaced assignment, and revalidate all affected records
+under their applicable policies before committing.
+
+No candidate endpoint or assignment write is enabled by this block.
+Assignment persistence, override records, policy controls and UI remain pending.
