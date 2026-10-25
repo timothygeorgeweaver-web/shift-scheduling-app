@@ -419,3 +419,18 @@ replacement history, immutable approvals, invalid override rejection,
 scoped foreign keys, runtime access denial and fixture rollback.
 The source migration creates two empty tables and changes no saved shifts.
 Recovery inventory now includes twenty tables and thirty migrations.
+
+## Assignment availability intersections
+
+Added exact actual-time intersection of a proposed shift with authorized
+effective calendar-date minute ranges. The reader must supply every touched
+date and select frozen intervals ahead of editable date cells.
+
+The conversion preserves non-quarter-hour frozen minutes, checks the full
+overnight shift, blocks both occurrences of repeated DST clock minutes, and
+does not invent elapsed time for nonexistent clock minutes. Missing dates
+and subminute endpoints fail explicitly instead of being rounded or
+silently treated as available.
+
+This is a pure conversion helper. Fresh candidate database reads and
+protected assignment mutations remain pending. No database writes occur.
