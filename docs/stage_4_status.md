@@ -698,3 +698,21 @@ No source assignments are cleared by certification.
 
 Separate assigner UI, editor exclusivity and confirmation controls are next.
 Recovery inventory includes twenty tables and thirty-nine migrations.
+
+## Separate assignment browser view
+
+Added Assign Shifts beside Schedule Planner for the selected draft week.
+The assigner uses seven aligned business-day columns and only start-time
+rows present among the week's existing shifts. Cards show job type and
+employee name or Unassigned, sorted by configured job order and finish time.
+Early-morning rows retain Next Day labels and saved rollover ordering.
+
+Assignment controls were removed from the shift-definition window and
+moved to the assigner's shift cards. The manager disables outer week/template
+actions while any editor is open, and explicit guards prevent opening the
+other editor. Closing an editor refreshes calendar revisions.
+
+Added a confirmed Clear All Assignments action that calls the atomic clear
+API and preserves the shift pattern. Assignment drafts participate in
+unsaved-change prompts. Static asset checks passed; owner browser acceptance
+is pending.

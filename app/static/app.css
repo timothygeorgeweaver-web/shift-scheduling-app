@@ -570,3 +570,29 @@ dialog.shift-popup {
 .assignment-panel textarea { width: 100%; box-sizing: border-box; }
 .assignment-panel fieldset { min-width: 0; }
 .assignment-panel button { margin: .25rem .25rem .25rem 0; }
+
+.assignment-time-grid {
+  width: 100%;
+  min-width: 0;
+  overflow: visible;
+}
+.assignment-card {
+  display: flex;
+  flex-direction: column;
+  gap: .25rem;
+  width: 100%;
+  text-align: left;
+}
+.assignment-card span {
+  display: block;
+  overflow-wrap: anywhere;
+  font-weight: normal;
+}
+.assignment-unassigned {
+  border-style: dashed;
+}
+.assignment-empty {
+  display: block;
+  color: #64748b;
+  text-align: center;
+}

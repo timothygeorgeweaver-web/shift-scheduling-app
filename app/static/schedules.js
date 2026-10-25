@@ -1,5 +1,6 @@
 import {node, action, addDays, weekday} from "/static/planner-grid.js?v=2";
-import {createShiftEditor} from "/static/shift-editor.js?v=11";
+import {createShiftEditor} from "/static/shift-editor.js?v=12";
+import {createAssignmentEditor} from "/static/assignment-editor.js?v=1";
 import {askTemplateName} from "/static/template-name-dialog.js?v=1";
 import {createTemplateEditor} from "/static/template-editor.js?v=4";
 import {askTemplateApplication} from "/static/template-apply-dialog.js?v=1";
@@ -57,7 +58,9 @@ export function createScheduleManager({api, expired, onEditorOpen = () => {}}) {
     const buttons = node("div", "", actions);
     buttons.className = "selected-week-buttons";
     const create = action("Create blank week", buttons, createBlank);
-    const open = action("Open week", buttons, openWeek);
+    const open = action("Schedule Planner", buttons, openWeek);
+    const assign = action("Assign Shifts", buttons, openAssigner);
+    const clearAssignments = action("Clear All Assignments", buttons, clearWeekAssignments);
     const save = action("Save as Template", buttons, saveTemplate);
     const copy = action("Copy this week", buttons, copyWeek);
     const remove = action("Delete week", buttons, deleteWeek);
@@ -76,6 +79,13 @@ export function createScheduleManager({api, expired, onEditorOpen = () => {}}) {
         if (wasOpen && !value && !busy && active()) task(() => load(selected));
       }
     });
+    const assigner = createAssignmentEditor({
+      api, expired, identity, parent: panel, onOpen: value => {
+        const wasOpen = editorOpen;
+        lockOuter(value);
+        if (wasOpen && !value && !busy && active()) task(() => load(selected));
+      }
+    });
     const templateEditor = createTemplateEditor({
       api, expired, identity, parent: panel, onOpen: lockOuter,
       onSaved: () => task(async () => {
@@ -86,6 +96,7 @@ export function createScheduleManager({api, expired, onEditorOpen = () => {}}) {
     dispose = () => {
       abort.abort();
       shifts.destroy();
+      assigner.destroy();
       templateEditor.destroy();
     };
     const say = text => { if (active()) status.textContent = text; };
@@ -134,6 +145,7 @@ export function createScheduleManager({api, expired, onEditorOpen = () => {}}) {
       create.disabled = !valid || !!week;
       open.disabled = save.disabled = !valid || !week;
       remove.disabled = !valid || !draft;
+      assign.disabled = clearAssignments.disabled = !valid || !draft;
       apply.disabled = !valid || (!!week && !draft) || !templates.length;
       copy.textContent = copySource ? "Copy week here" : "Copy this week";
       copy.disabled = !valid || (copySource ? !!covered(selected) : !week);
@@ -280,6 +292,7 @@ export function createScheduleManager({api, expired, onEditorOpen = () => {}}) {
     }
     async function load(keep = selected) {
       shifts.reset();
+      assigner.reset();
       templateEditor.reset();
       ready = false;
       renderActions();
@@ -311,7 +324,31 @@ export function createScheduleManager({api, expired, onEditorOpen = () => {}}) {
     }
     function openWeek() {
       const week = selectedWeek();
-      if (!busy && ready && week) shifts.open(select.value, week.id);
+      if (!busy && !editorOpen && ready && week) shifts.open(select.value, week.id);
+    }
+    function openAssigner() {
+      const week = selectedWeek();
+      if (busy || editorOpen || !ready || week?.state !== "draft") return;
+      assigner.open(select.value, week.id);
+    }
+    function clearWeekAssignments() {
+      const week = selectedWeek();
+      if (busy || editorOpen || !ready || week?.state !== "draft") return;
+      if (!window.confirm(
+        `Clear ALL employee assignments for week ${week.week_start_date}?\n` +
+        "Every shift will remain in the planner as Unassigned."
+      )) return;
+      task(async () => {
+        const result = await request(
+          weeksUrl() + "/" + encodeURIComponent(week.id) + "/assignments/clear",
+          mutation({
+            expected_week_revision: week.revision,
+            expected_location_revision: state.location.revision
+          })
+        );
+        await load(week.week_start_date);
+        say(`${result.cleared_assignments} assignments cleared. All shifts were kept.`);
+      });
     }
     async function saveTemplate() {
       const week = selectedWeek();
@@ -383,7 +420,7 @@ export function createScheduleManager({api, expired, onEditorOpen = () => {}}) {
       });
     }
     function editTemplate(template = null) {
-      if (busy || !ready) return;
+      if (busy || editorOpen || !ready) return;
       copySource = null;
       renderActions();
       shifts.reset();
