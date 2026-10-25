@@ -260,3 +260,22 @@ locks, no-op edits, duplicate/invalid inputs and supported date limits.
 
 This is pure mapping only. Eight-date transactional API support and the
 unavailability/main mass-editor display integration remain pending.
+
+## Atomic eight-calendar-date employee API
+
+Migration 0028 includes rollover in the private employee profile.
+GET/PUT /api/v1/me/business-planner/{location} provide an eight-calendar-date
+view for a seven-business-day planner.
+
+The new save service holds the existing employee/location transaction scope,
+checks policy and date revisions, preserves hidden edge cells and checks actual
+calendar-date locks. Existing protected save functions execute both batches
+inside the same transaction, followed by final gate/session checks.
+
+Focused PostgreSQL certification covers private reads, all-eight-date saves,
+edge preservation, stale requests, CSRF/origin, frozen exact intervals and an
+audit failure on the eighth date after the first batch has written.
+
+No new employee-table permissions are granted. Existing browser routes and
+display are unchanged. Business-day browser and mass-edit integration remain
+pending.
