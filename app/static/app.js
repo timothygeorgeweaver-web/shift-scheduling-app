@@ -1,12 +1,16 @@
 import {createStaffManager} from "/static/staff.js?v=13";
 import {createUnavailabilityManager} from "/static/unavailability.js?v=9";
 import {createScheduleManager} from "/static/schedules.js?v=28";
+import {createPublishedScheduleManager} from "/static/published-schedules.js?v=1";
 
 (() => {
   "use strict";
 
   const byId = (id) => document.getElementById(id);
   let csrfToken = "";
+  const publishedSchedules = createPublishedScheduleManager({
+    api, expired: () => showLogin("Your session ended. Please sign in again.")
+  });
   const schedules = createScheduleManager({
     onEditorOpen: value => staff.setScheduleEditorOpen(value),
     api, expired: () => showLogin("Your session ended. Please sign in again.")
@@ -25,6 +29,7 @@ import {createScheduleManager} from "/static/schedules.js?v=28";
     staff.reset();
     unavailability.reset();
     schedules.reset();
+    publishedSchedules.reset();
     csrfToken = "";
     byId("loading").hidden = true;
     byId("account-view").hidden = true;
@@ -64,6 +69,7 @@ import {createScheduleManager} from "/static/schedules.js?v=28";
     staff.start(identity);
     unavailability.start(identity);
     schedules.start(identity);
+    publishedSchedules.start(identity);
   }
 
   async function api(path, options = {}) {

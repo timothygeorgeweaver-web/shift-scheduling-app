@@ -616,3 +616,36 @@ dialog.shift-popup {
   color: #674800;
   font-weight: 600;
 }
+
+.published-schedules .planner-navigation {
+  width: min(100%, 720px);
+  gap: 10px;
+}
+.published-schedules .planner-navigation h3 { flex: 1; }
+.published-week-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.published-week-buttons [aria-pressed="true"] {
+  background: #d4e3f8;
+  border-color: #3564a0;
+}
+.published-roster-grid {
+  width: 100%;
+  overflow: visible;
+}
+.published-roster-card span,
+.published-roster-card small {
+  display: block;
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+}
+.published-roster-card.published-own-shift {
+  border-left-color: #23754b;
+  background: #e7f5ec;
+}
+.published-roster-card.published-unfilled {
+  border-style: dashed;
+  background: #fff6df;
+}

@@ -200,3 +200,21 @@ and final-audit rollback checks.
 
 Browser employee roster and publication controls remain pending.
 Recovery inventory: 23 tables and 52 reviewed migrations.
+
+## Employee published roster browser
+
+Added Published Schedules for accounts with an active linked employee profile.
+Workplace/month controls list published weeks and open the official roster.
+
+The read-only roster uses seven business-day columns and occupied start-time
+rows, 24-hour times, Next Day labels, saved job order, employee names and clear
+Unfilled cards. The viewer's own shifts are highlighted. It scrolls with the
+page rather than inside a separate planner viewport.
+
+The shared renderer is also available for staff historical-version views.
+Account changes remove old views; late responses are ignored. There is no
+polling. A publication event can refresh the matching employee view.
+
+Asset-serving checks passed. Browser acceptance will cover this screen together
+with the upcoming staff publication controls, which provide the end-to-end
+publication flow.
