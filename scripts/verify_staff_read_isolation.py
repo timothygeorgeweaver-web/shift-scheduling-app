@@ -210,6 +210,9 @@ def main():
         from scripts.verify_role_reorder import verify as verify_reorder
         verify_reorder(test_db, identities, locations)
 
+        from scripts.verify_business_day_storage import verify as verify_rollover
+        verify_rollover(test_db)
+
         # These mutations affect only synthetic identities in the copy.
         admin(f"""
             BEGIN;
