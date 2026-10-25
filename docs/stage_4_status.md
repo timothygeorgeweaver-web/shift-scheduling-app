@@ -761,3 +761,21 @@ Successful saves refresh Team and the schedule calendar.
 The server still requires assignment review before changing policy over
 live assignments. No policy values are changed by this update.
 Browser acceptance remains pending.
+
+## Preserving assignment reassessment
+
+Added pure reassessment of existing assignments under fresh availability,
+qualification, active-state and neighboring-assignment inputs, optionally
+using a proposed rest policy.
+
+Results identify hard conflicts, soft warnings requiring approval review,
+and mixed saved business-day policies needing reconciliation. Existing
+assignments remain intact. Previous approvals are not silently extended
+to changed policy or availability circumstances.
+
+Focused tests cover stricter rest before and after a shift, changed
+availability and qualifications, frozen precedence, combined hours,
+mixed-policy flags, stable batches and preservation of input records.
+
+Persistent review records, policy-change integration and review display
+remain pending. This change performs no database writes.
