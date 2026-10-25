@@ -127,3 +127,27 @@ The owner approved and browser-verified:
 
 Stage 3 completion and the verified recovery checkpoint are recorded in
 stage_3_status.md. Employee assignments and eligibility are the next stage.
+
+## Business-day rollover approved October 25, 2026
+
+Restaurant labor should align with the operating day rather than midnight.
+
+- Each location has an administrator-controlled local rollover time.
+- The default is 05:00; configuration uses 15-minute increments.
+- A business day includes its rollover instant and ends at the next rollover.
+- With the default, Monday includes Tuesday times before 05:00.
+- Unavailability, schedule and generic template planners use this layout.
+- After-midnight times retain their actual calendar date and are labelled
+  clearly as the next calendar day in planner columns.
+- Scheduling weeks begin at the configured rollover on the week-start date.
+- Daily labor totals split shifts at business-day boundaries, not midnight.
+- The untimed 30-minute meal estimate is allocated proportionally to elapsed
+  shift time within each business day when a shift crosses a boundary.
+- Availability, overlap and rest continue to use full actual shift endpoints.
+- Existing saved dates and instants must not be shifted or reinterpreted.
+- Rollover changes must not silently reinterpret saved weeks or templates.
+- Explicit availability cutoff calendar dates/times remain unchanged.
+
+The initial shared helpers reject ambiguous or nonexistent rollover boundaries
+rather than guessing an instant. Configuration safeguards and planner display
+of DST transitions require integration checks before release.

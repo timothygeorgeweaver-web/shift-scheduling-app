@@ -18,3 +18,16 @@ Allocation of the untimed meal estimate across local dates remains an open
 decision before implementing overnight daily-hour calculations.
 
 This step makes no database changes and exposes no new HTTP routes.
+
+## Business-day foundation
+
+Approved business-day rollover supersedes midnight-based daily grouping.
+Shared helpers now map business-day cells to exact calendar datetimes and back,
+label actual instants using the location timezone, and resolve UTC day bounds.
+
+The default rollover is 05:00. DST day lengths are measured in actual elapsed
+time. Ambiguous/nonexistent boundaries fail explicitly.
+
+This foundation is not connected to live settings, storage, totals or planners.
+Next: persist the location setting and protect existing week/template semantics,
+then update all planners and business-day labor calculations.
