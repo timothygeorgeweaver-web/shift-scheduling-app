@@ -675,3 +675,26 @@ remain job-type-only. Existing pattern/template reads remain separate from
 assignee summaries.
 
 Static asset checks passed. Owner browser acceptance remains pending.
+
+## Separate shift planning and assignment design
+
+Approved separating Schedule Planner from Assign Shifts. The assigner will
+show seven aligned business-day columns and only start-time rows containing
+existing shifts anywhere in that week. Cards show job type and employee
+name, or Unassigned, with job-type then finish-time sorting.
+
+The two editors will be mutually exclusive in the browser. Assignment
+controls will move out of the shift-definition editor. Existing business-day
+rollover and Next day labels remain applicable.
+
+Added the backend for Clear All Assignments on a selected draft week.
+Clearing preserves all shifts, retires current assignments and retains
+immutable approval history. Individual and summary audit writes share one
+transaction; a final summary failure rolls back the entire operation.
+
+Focused disposable checks cover two-assignment clearing, stale revisions,
+CSRF, retained shifts/history, final-audit rollback and an empty no-op.
+No source assignments are cleared by certification.
+
+Separate assigner UI, editor exclusivity and confirmation controls are next.
+Recovery inventory includes twenty tables and thirty-nine migrations.

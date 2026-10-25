@@ -115,3 +115,30 @@ def unassign_employee(
             ).fetchone()["result"]
         except psycopg.Error as error:
             fail(error)
+
+
+class ClearWeekAssignments(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    expected_week_revision: StrictInt = Field(ge=1, le=2147483646)
+    expected_location_revision: StrictInt = Field(ge=1, le=2147483646)
+
+
+@router.post(
+    "/locations/{location_id}/schedule-weeks/{week_id}/assignments/clear"
+)
+def clear_week_assignments(
+    location_id: UUID, week_id: UUID, body: ClearWeekAssignments,
+    token: str = Depends(mutation_token),
+):
+    with staff_connection(token, write=True) as conn:
+        try:
+            return conn.execute(
+                "SELECT scheduling.clear_draft_week_assignments("
+                "%s,%s,%s,%s) AS result",
+                (
+                    location_id, week_id, body.expected_week_revision,
+                    body.expected_location_revision,
+                ),
+            ).fetchone()["result"]
+        except psycopg.Error as error:
+            fail(error)
