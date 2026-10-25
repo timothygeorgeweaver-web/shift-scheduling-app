@@ -456,3 +456,25 @@ Focused disposable checks cover authorized projection, current assignment
 identity, fresh employee state, invalid employee/session denial, storage
 constraints and rollback. No source employee assignments are created.
 Recovery inventory includes twenty tables and thirty-one migrations.
+
+## Candidate evaluation service
+
+Connected authorized assignment snapshots to the shared eligibility engine.
+Frozen availability takes precedence, including explicitly empty frozen
+snapshots. Exact availability intersections cover the full shift.
+
+Results contain employee identity, revisions, eligibility reasons and exact
+business-day working-minute totals. Raw personal availability and neighboring
+shift intervals are excluded from the candidate result.
+
+The internal reader uses its caller's transaction and fetches inputs again
+on every call. No assignment mutation or HTTP endpoint is enabled.
+
+Rest policy must be supplied explicitly. Persistent administrator rest
+settings remain pending. Mixed saved timezone/rollover policies currently
+fail explicitly; reconciliation is required before enabling assignment
+writes for those cases. Matching-policy daily totals use the proposed
+shift's saved business-day policy.
+
+Focused tests cover hard rules, soft warnings, frozen precedence, adjacent
+week rest, combined hours, privacy projection and fresh repeated reads.

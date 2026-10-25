@@ -1,0 +1,101 @@
+"""Internal candidate evaluation; no HTTP endpoint or assignment mutations."""
+
+from datetime import date, datetime
+
+from app.assignment_availability import unavailable_during
+from app.assignment_eligibility import evaluate_assignment
+from app.assignment_timing import Interval
+from app.planner_logic import cells_to_intervals
+
+
+def _interval(row):
+    return Interval(
+        datetime.fromisoformat(row["start_at"]),
+        datetime.fromisoformat(row["end_at"]),
+    )
+
+
+def evaluate_inputs(data, *, rest_policy):
+    """Evaluate one authorized snapshot with an explicit validated rest policy.
+
+    Business-day totals use the proposed shift's saved week policy.
+    Neighboring assignments must have matching saved timezone and rollover
+    semantics until mixed-policy reconciliation is implemented. Fail closed
+    rather than silently reclassify previously saved labor.
+    """
+    week = data["week"]
+    candidate = _interval(data["slot"])
+    assigned = []
+    for row in data["assigned"]:
+        if (row["timezone"] != week["timezone"]
+                or row["business_day_start_minute"]
+                != week["business_day_start_minute"]):
+            raise ValueError(
+                "Neighboring assignments use different saved business-day "
+                "policies; reconcile those policies before assigning."
+            )
+        assigned.append(_interval(row))
+
+    effective = {}
+    for row in data["calendar_days"]:
+        day = date.fromisoformat(row["date"])
+        if day in effective:
+            raise ValueError("Duplicate effective availability date.")
+        frozen = row["frozen_blocked"]
+        effective[day] = (
+            frozen if frozen is not None
+            else cells_to_intervals(row["blocked_cells"])
+        )
+    unavailable = unavailable_during(
+        candidate, effective, timezone_name=week["timezone"],
+    )
+
+    if set(rest_policy) != {
+        "window_start", "window_end", "rest_minutes",
+    }:
+        raise ValueError("Supply the complete rest policy.")
+    result = evaluate_assignment(
+        candidate, assigned, unavailable,
+        employee_active=data["employee"]["active"],
+        role_active=data["role_active"],
+        qualified=data["qualified"],
+        timezone_name=week["timezone"],
+        rollover_minute=week["business_day_start_minute"],
+        rest_window_start=rest_policy["window_start"],
+        rest_window_end=rest_policy["window_end"],
+        rest_minutes=rest_policy["rest_minutes"],
+    )
+
+    # Never include raw personal availability or neighboring shift intervals.
+    return {
+        "employee_id": data["employee"]["id"],
+        "display_name": data["employee"]["display_name"],
+        "employee_revision": data["employee"]["revision"],
+        "slot_id": data["slot"]["id"],
+        "slot_revision": data["slot"]["revision"],
+        "week_revision": week["revision"],
+        "category": result.category,
+        "hard_blocks": list(result.hard_blocks),
+        "warnings": list(result.warnings),
+        "daily_work": [
+            {
+                "business_date": day.isoformat(),
+                "estimated_minutes_numerator": minutes.numerator,
+                "estimated_minutes_denominator": minutes.denominator,
+            }
+            for day, minutes in result.daily_work
+        ],
+    }
+
+
+def read_candidate(conn, slot_id, employee_id, *, rest_policy):
+    """Use the caller's authorized transaction and freshly read database state.
+
+    Candidate lists require a consistent transaction snapshot. Assignment
+    commits must lock and re-read; this result never authorizes a later save.
+    """
+    data = conn.execute(
+        "SELECT scheduling.read_assignment_inputs(%s,%s) AS result",
+        (slot_id, employee_id),
+    ).fetchone()["result"]
+    return evaluate_inputs(data, rest_policy=rest_policy)
