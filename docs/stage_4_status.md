@@ -240,3 +240,23 @@ when calendar loading is unavailable.
 Local syntax and simulated interaction checks cover initially open editors,
 opening/closing after form load, blocked submission, confirmed-save refresh,
 failed-save retry protection, and reset cleanup. Asset serving passes.
+
+## Unavailability business-day storage mapping
+
+Shared helpers map business-day planner cells onto existing calendar dates.
+Seven business-day columns can span eight calendar dates.
+
+Explicit cell edits preserve all untouched stored cells, including portions
+outside the displayed business week. Actual calendar-date locks reject changed
+cells; unchanged locked cells produce no write. Inputs are never mutated.
+
+Inclusive mass-edit business dates map selected weekday cells onto their actual
+calendar dates, including carry into the date after the final business day.
+These mapped cells are additions only; persistence must union them with saved
+cells and recheck revisions, authorization and locks atomically.
+
+Targeted tests cover all week cells, Sunday carry, boundary-cell preservation,
+locks, no-op edits, duplicate/invalid inputs and supported date limits.
+
+This is pure mapping only. Eight-date transactional API support and the
+unavailability/main mass-editor display integration remain pending.
