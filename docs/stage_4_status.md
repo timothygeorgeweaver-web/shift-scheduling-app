@@ -101,3 +101,21 @@ Existing midnight-based weeks retain their existing grouping. Generic templates
 continue using midnight until template rollover metadata is connected.
 New-week rollover capture and employee unavailability integration remain pending.
 Browser acceptance of the activated rollover is still required.
+
+## Business-day-aware pattern copying
+
+The shared copy/apply helper now maps each source shift by its starting business
+weekday and wall-clock times into the destination's saved rollover.
+Its same/next-calendar-day end relationship is preserved.
+
+Source weeks supply their saved rollover. Legacy template snapshots without
+rollover metadata continue to mean midnight. Template snapshot rollover
+metadata must be connected before non-midnight template creation is activated.
+
+Target shift timing still resolves actual elapsed duration and rejects invalid
+DST endpoints. Source records are not changed.
+
+Targeted tests cover all seven weekdays and all 96 clock cells across several
+rollover combinations, legacy Sunday early hours, overnight shifts, the
+following Monday's early hours and invalid source intervals.
+New-week rollover activation and end-to-end copy/apply checks remain pending.

@@ -96,3 +96,40 @@ def business_day_bounds(day, timezone_name,
     if end <= start:
         raise ValueError("Business day must have positive elapsed duration.")
     return start, end
+
+
+def rebase_local_shift(start, end, source_first, target_first, *,
+                       source_rollover=0, target_rollover=0):
+    """Preserve business weekday and wall-clock times when copying a pattern.
+
+    This creates new local datetimes; it never changes a saved source shift.
+    Actual target instants and DST validity are resolved by shift timing.
+    """
+    _date(source_first)
+    _date(target_first)
+    validate_rollover(source_rollover)
+    validate_rollover(target_rollover)
+    for value in (start, end):
+        if (
+            not isinstance(value, datetime) or value.tzinfo is not None
+            or value.second or value.microsecond
+        ):
+            raise ValueError("Copy endpoints must be exact naive local minutes.")
+    overnight = (end.date() - start.date()).days
+    if end <= start or overnight not in (0, 1):
+        raise ValueError("Shift must end later on the same or next calendar day.")
+
+    source_day = business_date(start, source_rollover)
+    offset = (source_day - source_first).days
+    if not 0 <= offset < 7:
+        raise ValueError("Source shift starts outside its business week.")
+
+    target_day = target_first + timedelta(days=offset)
+    start_minute = start.hour * 60 + start.minute
+    if start_minute < target_rollover:
+        target_day += timedelta(days=1)
+    target_start = datetime.combine(target_day, start.time())
+    target_end = datetime.combine(
+        target_day + timedelta(days=overnight), end.time(),
+    )
+    return target_start, target_end

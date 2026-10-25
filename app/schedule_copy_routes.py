@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException
 import psycopg
 from pydantic import BaseModel, ConfigDict, Field, StrictInt
 
+from app.business_day import rebase_local_shift
 from app.shift_routes import fail, read_week
 from app.shift_timing import calculate_shift_timing
 from app.staff_data import staff_connection
@@ -32,10 +33,13 @@ def populate_draft(conn, location_id, source, destination, target_start):
     for slot in source["slots"]:
         local_start = datetime.fromisoformat(slot["local_start"])
         local_end = datetime.fromisoformat(slot["local_end"])
-        day = target_start + timedelta(
-            days=(local_start.date()-first).days
-        )
         try:
+            local_start, local_end = rebase_local_shift(
+                local_start, local_end, first, target_start,
+                source_rollover=source["week"].get("business_day_start_minute", 0),
+                target_rollover=destination["business_day_start_minute"],
+            )
+            day = local_start.date()
             timing = calculate_shift_timing(
                 day,
                 local_start.hour*60+local_start.minute,
@@ -46,7 +50,7 @@ def populate_draft(conn, location_id, source, destination, target_start):
         except ValueError as error:
             raise HTTPException(
                 status_code=422,
-                detail=f"Cannot copy a shift to {day}: {error}",
+                detail=f"Cannot copy this shift into the destination business week: {error}",
             ) from None
 
         result = conn.execute(
