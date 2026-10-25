@@ -346,6 +346,79 @@ export function createStaffManager({api, expired}) {
     }
 
 
+    function businessDayControls() {
+      const panel = document.createElement("details");
+      panel.append(element("summary", "Business-day rollover"));
+      const container = document.createElement("div");
+      const openerFields = document.createElement("fieldset");
+      const opener = element("button", "Edit business-day rollover", "button secondary");
+      opener.type = "button";
+      openerFields.append(opener);
+      container.append(openerFields);
+      panel.append(container);
+      opener.addEventListener("click", () => run(async () => {
+        const path = base() + "business-day-policy";
+        const policy = await request(path);
+        if (!alive()) return;
+        const form = document.createElement("form");
+        const fields = document.createElement("fieldset");
+        fields.append(element("legend", "Business-day rollover"));
+        fields.append(element("p", "Local time in " + policy.timezone + ".", "description"));
+        const rollover = document.createElement("select");
+        rollover.required = true;
+        const clock = minute => String(Math.floor(minute / 60)).padStart(2, "0") +
+          ":" + String(minute % 60).padStart(2, "0");
+        for (let minute = 0; minute < 1440; minute += 15) {
+          const option = element("option", clock(minute));
+          option.value = String(minute);
+          rollover.append(option);
+        }
+        rollover.value = String(policy.business_day_start_minute);
+        fields.append(field("Start of each business day (24-hour time)", rollover));
+        const preview = element("p", "", "description");
+        const updatePreview = () => {
+          const time = clock(Number(rollover.value));
+          preview.textContent = `Monday runs from Monday ${time} until Tuesday ${time}. ` +
+            "Times before rollover belong to the previous business day.";
+        };
+        rollover.addEventListener("change", updatePreview);
+        updatePreview();
+        fields.append(preview);
+        fields.append(element("p",
+          "Default: 05:00. New schedule weeks and new templates capture this setting. " +
+          "Existing weeks and templates keep their saved rollover. " +
+          "Refresh the schedule calendar after saving before creating a week or template.",
+          "description"));
+        const message = element("p", "", "team-status");
+        message.setAttribute("role", "status");
+        fields.append(message);
+        const saveButton = submit("Save business-day rollover");
+        fields.append(saveButton);
+        form.append(fields);
+        let blocked = false;
+        form.addEventListener("submit", event => {
+          event.preventDefault();
+          if (busy || blocked || !form.reportValidity()) return;
+          saveButton.disabled = true;
+          run(async () => {
+            try {
+              await save(path, "PATCH", {
+                expected_location_revision: policy.location_revision,
+                business_day_start_minute: Number(rollover.value),
+              });
+            } catch (error) {
+              blocked = true;
+              message.textContent = "Save was not confirmed. Refresh Team before trying again.";
+              throw error;
+            }
+          });
+        });
+        container.replaceChildren(form);
+        status.textContent = "";
+      }));
+      return panel;
+    }
+
     function availabilityPolicyControls() {
       const panel = document.createElement("details");
       panel.append(element("summary", "Availability deadlines"));
@@ -519,7 +592,7 @@ export function createStaffManager({api, expired}) {
       if (!alive()) return;
       const fragment = document.createDocumentFragment();
       if (location.selectedOptions[0]?.dataset.admin === "true") {
-        fragment.append(settingsControls(), availabilityPolicyControls());
+        fragment.append(settingsControls(), businessDayControls(), availabilityPolicyControls());
       }
       const columns = element("div", "", "team-columns");
       const staff = element("section");

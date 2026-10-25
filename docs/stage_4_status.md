@@ -207,3 +207,20 @@ Month controls are constrained to the calendar area.
 Local JavaScript syntax and simulated action-flow checks cover button states,
 creation/deletion, copying, Append/Replace payloads, editor-close refresh and
 dialog cleanup. Asset serving passes. Owner browser acceptance remains pending.
+
+## Administrator rollover browser control
+
+Team now includes an administrator-only Business-day rollover section.
+It reads the selected location's saved policy and offers all 96 quarter-hour
+clock times with a business-day preview.
+
+Saving submits CSRF and the exact location revision to the audited policy API.
+A failed or uncertain save blocks repeat submission until Team is refreshed.
+Existing saved weeks/templates keep their captured rollover.
+
+Local syntax and simulated interaction checks cover administrator visibility,
+scheduler exclusion, dropdown values, CSRF/revision payloads and failure retry
+protection. Asset serving passes. Owner browser acceptance remains pending.
+
+Employee unavailability/mass-edit rollover integration, business-day labor
+allocation and DST rollover-boundary safeguards remain pending.
