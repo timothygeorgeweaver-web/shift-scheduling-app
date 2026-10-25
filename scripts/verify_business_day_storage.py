@@ -32,10 +32,11 @@ def verify(test_db):
                 "Migration changed existing calendar times or records.")
         expected = 300 if table == "location" else 0
         require(admin(f"""
-            SELECT count(*)>0
-              AND bool_and(business_day_start_minute={expected})
-            FROM scheduling.{table};
-        """, test_db) == "t", "Unexpected stored rollover baseline.")
+            SELECT column_default
+            FROM information_schema.columns
+            WHERE table_schema='scheduling' AND table_name='{table}'
+              AND column_name='business_day_start_minute';
+        """, test_db) == str(expected), "Unexpected raw-row rollover default.")
 
         # Every invalid write is caught within a rolled-back subtransaction.
         admin(f"""

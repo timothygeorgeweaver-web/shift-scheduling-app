@@ -323,7 +323,8 @@ export function createTemplateEditor({api, expired, identity, parent, onOpen, on
         name: pattern?.name ?? "",
         slots: (pattern?.slots ?? []).map(slot => ({...slot, key: ++nextKey}))
       };
-      context.rolloverMinute = pattern?.business_day_start_minute ?? 0;
+      context.rolloverMinute = pattern?.business_day_start_minute ??
+        context.rolloverMinute ?? 0;
       revision = pattern?.revision ?? 0;
       context.locationRevision = pattern?.location_revision ?? context.locationRevision;
       busy = false;

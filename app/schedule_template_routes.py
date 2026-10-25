@@ -238,11 +238,11 @@ def write_pattern(token, location_id, template_id, body):
         try:
             authorized_location(conn, location_id)
             location = conn.execute(
-                "SELECT week_start FROM scheduling.location WHERE id=%s",
+                "SELECT week_start,business_day_start_minute FROM scheduling.location WHERE id=%s",
                 (location_id,),
             ).fetchone()
             weekday = location["week_start"]
-            rollover = 0  # New-template activation follows with database capture.
+            rollover = location["business_day_start_minute"]
             if template_id is not None:
                 saved = read_template(conn, location_id, template_id)
                 weekday = saved["week_start_day"]

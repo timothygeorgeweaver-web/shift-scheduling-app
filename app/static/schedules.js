@@ -1,7 +1,7 @@
 import {node, action, addDays, weekday} from "/static/planner-grid.js?v=2";
 import {createShiftEditor} from "/static/shift-editor.js?v=10";
 import {askTemplateName} from "/static/template-name-dialog.js?v=1";
-import {createTemplateEditor} from "/static/template-editor.js?v=3";
+import {createTemplateEditor} from "/static/template-editor.js?v=4";
 
 export function createScheduleManager({api, expired}) {
   let root = null, epoch = 0, closeShifts = () => {};
@@ -153,6 +153,7 @@ export function createScheduleManager({api, expired}) {
       templateEditor.open({
         locationId: select.value,
         locationRevision: state.location.revision,
+        rolloverMinute: state.location.business_day_start_minute,
         templateId: template?.id ?? null
       });
     }

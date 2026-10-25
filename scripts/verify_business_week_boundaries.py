@@ -159,6 +159,11 @@ def main():
                 raise SystemExit("STOP: Direct SQL bypassed the week boundary.")
 
             legacy = week("2027-02-01")
+            admin("BEGIN; SET LOCAL ROLE shift_scheduling_owner;"
+                  "UPDATE scheduling.schedule_week "
+                  "SET business_day_start_minute=0 "
+                  f"WHERE id={literal(legacy['id'])}; COMMIT;", test_db)
+            legacy["business_day_start_minute"] = 0
             legacy_url = base+"/"+legacy["id"]
             require(legacy["business_day_start_minute"] == 0,
                     "Staged creation changed before UI integration.")

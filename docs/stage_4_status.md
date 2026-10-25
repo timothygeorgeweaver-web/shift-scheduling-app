@@ -135,3 +135,24 @@ Targeted tests cover all weekdays/week-start settings, several rollovers,
 following-Monday early hours, legacy snapshots and invalid metadata.
 Database capture for new templates and scheduled-week snapshots is still pending.
 New direct templates remain midnight-based until that capture is activated.
+
+## New week and template rollover capture activated
+
+Migration 0025 captures the location rollover for new blank weeks and direct
+templates. Saving a week as a template captures that week's saved rollover.
+Replacing a template from a week captures the replacement week's rollover;
+renaming, archiving and direct editing preserve its existing rollover.
+
+Template snapshot metadata carries the captured value. SQL validates direct
+pattern starts against business-week boundaries and checks rollover metadata.
+Existing saved records are not migrated or reinterpreted.
+
+New generic template editors receive the current location rollover.
+Scheduled and generic grids already support their saved rollover.
+
+Focused disposable checks cover new creation, following-Monday early shifts,
+save/edit/apply/copy, legacy-week copying, stale policy denial and preservation
+after a later location-policy change.
+
+Browser acceptance, administrator controls, employee unavailability integration,
+DST rollover-boundary safeguards and daily labor allocation remain pending.
