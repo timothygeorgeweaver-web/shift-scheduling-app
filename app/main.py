@@ -43,6 +43,8 @@ from app.planner_routes import router as planner_router
 app.include_router(planner_router)
 from app.business_planner_routes import router as business_planner_router
 app.include_router(business_planner_router)
+from app.business_planner_bulk_routes import router as business_bulk_router
+app.include_router(business_bulk_router)
 from app.planner_bulk_routes import router as planner_bulk_router
 app.include_router(planner_bulk_router)
 from app.schedule_week_routes import router as schedule_week_router

@@ -45,7 +45,7 @@ export function createUnavailabilityManager({api, expired}) {
     const say = text => { if (alive()) status.textContent = text; };
     const profile = () => profiles.find(p => p.location_id === location);
     const endpoint = () => "/api/v1/me/business-planner/" + encodeURIComponent(location);
-    const bulkEndpoint = () => "/api/v1/me/planner/" + encodeURIComponent(location);
+    const bulkEndpoint = endpoint;
 
     function same(a, b) { return JSON.stringify(a) === JSON.stringify(b); }
     function changedDates() {
@@ -87,7 +87,7 @@ export function createUnavailabilityManager({api, expired}) {
       }
       if (!response.ok) {
         const error = new Error(
-          response.status === 409 ? "Data changed. Refresh or create a new preview." :
+          response.status === 409 ? "Data or policy changed. Return to the main calendar and refresh before previewing again." :
           response.status === 423 ? "A date is now locked. Refresh the calendar." :
           response.status === 404 ? "No active employee profile is available for this workplace." :
           response.status === 422 ? "Check your dates and selections. Use at most 366 dates per mass edit." :
@@ -269,8 +269,8 @@ export function createUnavailabilityManager({api, expired}) {
       node("p", "Choose an inclusive date range and mark a weekly pattern. Submission adds blocks to matching dates. It never clears previously saved blocks.", view);
       const dates = node("div", "", view);
       dates.className = "planner-range";
-      const from = dateInput("Start date", dates, bulk.first);
-      const to = dateInput("End date", dates, bulk.last);
+      const from = dateInput("Start business date", dates, bulk.first);
+      const to = dateInput("End business date", dates, bulk.last);
 
       const review = node("section");
       review.className = "planner-review";
@@ -285,7 +285,7 @@ export function createUnavailabilityManager({api, expired}) {
       to.addEventListener("change", () => { bulk.last = to.value; invalidate(); });
 
       node("h3", "Weekly pattern", view);
-      node("p", "Mark the times you cannot work on each weekday. The start and end dates above control where this pattern is added.", view);
+      node("p", "Mark times for each business weekday. Early-morning Next Day cells belong to the weekday above. The date range includes the whole final business day.", view);
 
       const days = Array.from({length: 7}, (_, i) => {
         const day = addDays(bulk.anchor, i);
@@ -297,7 +297,8 @@ export function createUnavailabilityManager({api, expired}) {
       grid = createPlannerGrid(view, days, (index, cells) => {
         bulk.cells[String(weekday(days[index].date))] = cells;
         invalidate();
-      }, scrollPositions.bulk, {genericWeek: true});
+      }, scrollPositions.bulk, {genericWeek: true,
+        rolloverMinute: data.profile.business_day_start_minute});
 
       const controls = node("div", "", view);
       controls.className = "team-controls planner-footer";
@@ -312,7 +313,8 @@ export function createUnavailabilityManager({api, expired}) {
         if (!hasTemplate()) { say("Select at least one unavailable cell."); return; }
         const payload = {
           first_date: from.value, last_date: to.value,
-          weekly_cells: JSON.parse(JSON.stringify(bulk.cells))
+          weekly_cells: JSON.parse(JSON.stringify(bulk.cells)),
+          expected_location_revision: data.profile.location_revision
         };
         task(async () => {
           preview = previewPayload = null;
@@ -337,17 +339,17 @@ export function createUnavailabilityManager({api, expired}) {
       function showPreview() {
         review.replaceChildren();
         node("h3", "Review additions", review);
-        node("p", `${preview.changed_dates.length} dates will change; ${preview.added_cell_count * 15} minutes of unavailability will be added.`, review);
+        node("p", `${preview.changed_dates.length} calendar dates will change; ${preview.added_cell_count * 15} minutes of unavailability will be added.`, review);
         const changed = node("details", "", review);
-        node("summary", "Dates receiving new blocks", changed);
+        node("summary", "Calendar dates receiving new blocks", changed);
         const changes = node("ul", "", changed);
         for (const day of preview.changed_dates) {
-          node("li", `${day.date}: add ${day.added_cells * 15} minutes`, changes);
+          node("li", `${day.date} (business day ${day.business_dates.join(", ")}): add ${day.added_cells * 15} minutes`, changes);
         }
         node("p", `${preview.skipped_locked_dates.length} locked dates will be skipped.`, review);
         const skipped = node("ul", "", review);
         for (const day of preview.skipped_locked_dates) {
-          node("li", `${day.date}: ${day.reason.replaceAll("_", " ")}`, skipped);
+          node("li", `${day.date} (business day ${day.business_dates.join(", ")}): ${day.reason.replaceAll("_", " ")}`, skipped);
         }
         if (!preview.changed_dates.length) {
           node("p", "There are no new blocks to save.", review);
@@ -356,7 +358,7 @@ export function createUnavailabilityManager({api, expired}) {
         confirmButton = action("Confirm and add unavailability", review, () => {
           if (!preview || !previewPayload) return;
           const payload = {...previewPayload, expected_preview: preview.preview_id};
-          const showDate = preview.changed_dates[0].date;
+          const showDate = preview.changed_dates[0].business_dates[0];
           task(async () => {
             try {
               const result = await request(bulkEndpoint() + "/bulk/apply", postOptions(payload));

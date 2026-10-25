@@ -299,3 +299,24 @@ Asset serving passes.
 
 The mass editor still uses its original calendar-day API/layout pending the
 next integration block. Browser acceptance will cover both planners together.
+
+## Business-day additive mass editor connected
+
+The mass editor now uses the location rollover and inclusive business-date
+ranges. A final Sunday's early hours can add blocks on the following Monday.
+
+Preview lists actual calendar dates alongside their originating business dates.
+The request includes the exact location revision, preventing a pattern drawn
+under one rollover from being silently interpreted under another.
+
+Preview performs no writes. Apply unions mapped cells with saved cells, skips
+actual locked calendar dates, checks the session-bound preview stamp and
+rechecks all selected date gates before committing the complete transaction.
+
+Focused PostgreSQL checks cover inclusive Sunday carry, preservation of
+existing blocks, idempotent repetition, stale previews/policies, frozen-date
+skips and final-audit failure rollback across multiple weeks.
+
+Both unavailability planners now use business-day layouts. Owner browser
+acceptance remains pending. DST boundary safeguards and business-day labor
+allocation remain separate remaining work.
