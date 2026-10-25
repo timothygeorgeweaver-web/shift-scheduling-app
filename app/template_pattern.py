@@ -3,6 +3,8 @@
 from datetime import date, datetime, time, timedelta
 from uuid import UUID
 
+from app.business_day import business_date, validate_rollover
+
 from pydantic import (
     BaseModel, ConfigDict, Field, StrictBool, StrictInt,
     field_validator, model_validator,
@@ -52,13 +54,16 @@ def _week_start(value):
     return value
 
 
-def to_snapshot(draft: TemplateDraft, week_start_day: int):
+def to_snapshot(draft: TemplateDraft, week_start_day: int, rollover_minute=0):
     """Encode generic weekdays in the existing independent snapshot format."""
     start_day = _week_start(week_start_day)
+    validate_rollover(rollover_minute)
     anchor = date(2000, 1, 3) + timedelta(days=start_day)
     slots = []
     for shift in draft.slots:
         day = anchor + timedelta(days=(shift.weekday-start_day) % 7)
+        if shift.start_minute < rollover_minute:
+            day += timedelta(days=1)
         start = datetime.combine(day, time()) + timedelta(
             minutes=shift.start_minute
         )
@@ -75,14 +80,23 @@ def to_snapshot(draft: TemplateDraft, week_start_day: int):
         "week": {
             "week_start_date": anchor.isoformat(),
             "week_start_day": start_day,
+            "business_day_start_minute": rollover_minute,
         },
         "slots": slots,
     }
 
 
-def from_snapshot(snapshot, name):
+def from_snapshot(snapshot, name, rollover_minute=None):
     """Read saved patterns without rounding or interpreting them in a timezone."""
     try:
+        metadata_rollover = snapshot["week"].get("business_day_start_minute")
+        if rollover_minute is None:
+            rollover_minute = 0 if metadata_rollover is None else metadata_rollover
+        validate_rollover(rollover_minute)
+        if metadata_rollover is not None:
+            validate_rollover(metadata_rollover)
+            if metadata_rollover != rollover_minute:
+                raise ValueError("Saved template rollover metadata is inconsistent.")
         first = date.fromisoformat(snapshot["week"]["week_start_date"])
         start_day = _week_start(snapshot["week"]["week_start_day"])
         if first.weekday() != start_day:
@@ -100,14 +114,15 @@ def from_snapshot(snapshot, name):
                 or end.second or end.microsecond
             ):
                 raise ValueError("Saved template endpoints must be exact local minutes.")
-            if not first <= start.date() <= first+timedelta(days=6):
+            start_day = business_date(start, rollover_minute)
+            if not first <= start_day <= first+timedelta(days=6):
                 raise ValueError("Saved shift starts outside its template week.")
             day_count = (end.date()-start.date()).days
             if day_count not in (0, 1):
                 raise ValueError("Saved shift must end on the same or next day.")
             slots.append(TemplateShift(
                 role_id=value["role_id"],
-                weekday=start.weekday(),
+                weekday=start_day.weekday(),
                 start_minute=start.hour*60+start.minute,
                 end_minute=end.hour*60+end.minute,
                 ends_next_day=day_count == 1,

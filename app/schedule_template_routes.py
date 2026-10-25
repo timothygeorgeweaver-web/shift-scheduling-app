@@ -215,7 +215,10 @@ def template_pattern(
                 (location_id,),
             ).fetchone()
             try:
-                draft = from_snapshot(saved["snapshot"], saved["name"])
+                draft = from_snapshot(
+                    saved["snapshot"], saved["name"],
+                    saved["business_day_start_minute"],
+                )
             except ValueError as error:
                 raise HTTPException(status_code=422, detail=str(error)) from None
             return {
@@ -223,6 +226,7 @@ def template_pattern(
                 "id": saved["id"],
                 "revision": saved["revision"],
                 "week_start_day": saved["week_start_day"],
+                "business_day_start_minute": saved["business_day_start_minute"],
                 "location_revision": location["revision"],
             }
         except psycopg.Error as error:
@@ -238,15 +242,18 @@ def write_pattern(token, location_id, template_id, body):
                 (location_id,),
             ).fetchone()
             weekday = location["week_start"]
+            rollover = 0  # New-template activation follows with database capture.
             if template_id is not None:
-                weekday = read_template(conn, location_id, template_id)["week_start_day"]
+                saved = read_template(conn, location_id, template_id)
+                weekday = saved["week_start_day"]
+                rollover = saved["business_day_start_minute"]
             return conn.execute(
                 "SELECT scheduling.save_template_pattern("
                 "%s,%s,%s,%s,%s,%s) AS result",
                 (
                     location_id, template_id, body.expected_template_revision,
                     body.expected_location_revision, body.name,
-                    Jsonb(to_snapshot(body, weekday)),
+                    Jsonb(to_snapshot(body, weekday, rollover)),
                 ),
             ).fetchone()["result"]
         except psycopg.Error as error:

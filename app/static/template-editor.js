@@ -1,6 +1,8 @@
 import {node, action, addDays, weekday} from "/static/planner-grid.js?v=2";
 import {createScheduleGrid, clockMinute} from "/static/schedule-grid.js?v=6";
 
+import {businessDateForLocal, calendarDateForCell} from "/static/business-day.js?v=1";
+
 const names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 const anchor = "2000-01-03";
 
@@ -70,7 +72,10 @@ export function createTemplateEditor({api, expired, identity, parent, onOpen, on
 
   function displaySlots() {
     return draft.slots.map(slot => {
-      const day = addDays(anchor, slot.weekday);
+      const day = calendarDateForCell(
+        addDays(anchor, slot.weekday), slot.start_minute,
+        context.rolloverMinute ?? 0
+      );
       const endDay = addDays(day, slot.ends_next_day ? 1 : 0);
       const start = day + "T" + clockMinute(slot.start_minute) + ":00";
       const end = endDay + "T" + clockMinute(slot.end_minute) + ":00";
@@ -88,7 +93,8 @@ export function createTemplateEditor({api, expired, identity, parent, onOpen, on
   function timeSelect(label, value, parent) {
     const select = node("select", "", node("label", label, parent));
     select.required = true;
-    for (let minute = 0; minute < 1440; minute += 15) {
+    for (let cell = 0; cell < 96; cell++) {
+      const minute = ((context.rolloverMinute ?? 0) + cell * 15) % 1440;
       node("option", clockMinute(minute), select).value = String(minute);
     }
     select.value = String(value);
@@ -126,14 +132,16 @@ export function createTemplateEditor({api, expired, identity, parent, onOpen, on
       }
       role.value = existing.role_id;
     }
-    const daySelect = node("select", "", node("label", "Weekday", layout));
+    const daySelect = node("select", "", node("label", "Starting business weekday", layout));
     names.forEach((name, index) => node("option", name, daySelect).value = String(index));
     daySelect.value = String(value.weekday);
     const start = timeSelect("Start time (24-hour)", value.start_minute, layout);
     const end = timeSelect("End time (24-hour)", value.end_minute, layout);
-    const next = node("input", "", node("label", "Ends next day", form));
+    const next = node("input", "", node("label", "Ends next calendar day", form));
     next.type = "checkbox";
     next.checked = value.ends_next_day;
+    node("p", "Times before rollover are on the next calendar day. " +
+      "Ends next calendar day means the day after the actual start.", form);
     const note = node("textarea", "", node("label", "Shift note (optional)", form));
     note.maxLength = 500;
     note.rows = 2;
@@ -225,12 +233,19 @@ export function createTemplateEditor({api, expired, identity, parent, onOpen, on
       dirty = true;
       nameInput.setCustomValidity("");
     });
+    node("p", `Business days start at ${clockMinute(context.rolloverMinute ?? 0)}.`, root);
     node("p", `${draft.slots.length} shifts · ${dirty ? "Unsaved changes" : "Saved pattern"}`, root);
     createScheduleGrid(root, {
-      week: {week_start_date: anchor, state: "draft"},
+      week: {week_start_date: anchor, state: "draft",
+        business_day_start_minute: context.rolloverMinute ?? 0},
       slots: displaySlots()
     }, roles,
-      (day, minute, position, element) => openShift(null, weekday(day), minute, element),
+      (day, minute, position, element) => {
+        const businessDay = businessDateForLocal(
+          `${day}T${clockMinute(minute)}:00`, context.rolloverMinute ?? 0
+        );
+        openShift(null, weekday(businessDay), minute, element);
+      },
       0,
       (slot, element) => {
         const existing = draft.slots.find(item => String(item.key) === slot.id);
@@ -308,6 +323,7 @@ export function createTemplateEditor({api, expired, identity, parent, onOpen, on
         name: pattern?.name ?? "",
         slots: (pattern?.slots ?? []).map(slot => ({...slot, key: ++nextKey}))
       };
+      context.rolloverMinute = pattern?.business_day_start_minute ?? 0;
       revision = pattern?.revision ?? 0;
       context.locationRevision = pattern?.location_revision ?? context.locationRevision;
       busy = false;

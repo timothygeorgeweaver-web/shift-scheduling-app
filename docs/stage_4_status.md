@@ -119,3 +119,19 @@ Targeted tests cover all seven weekdays and all 96 clock cells across several
 rollover combinations, legacy Sunday early hours, overnight shifts, the
 following Monday's early hours and invalid source intervals.
 New-week rollover activation and end-to-end copy/apply checks remain pending.
+
+## Template rollover conversion and editor support
+
+Generic weekday conversion now maps business weekdays to actual local calendar
+timestamps using a saved rollover. Snapshot metadata records the rollover;
+legacy snapshots without it retain midnight semantics. Conflicting metadata is
+rejected rather than silently interpreted.
+
+The pattern API returns the saved template rollover. The generic editor uses it
+for grid grouping, quarter-hour choices and business weekday selection.
+The end-next-day flag remains relative to the actual calendar start date.
+
+Targeted tests cover all weekdays/week-start settings, several rollovers,
+following-Monday early hours, legacy snapshots and invalid metadata.
+Database capture for new templates and scheduled-week snapshots is still pending.
+New direct templates remain midnight-based until that capture is activated.
