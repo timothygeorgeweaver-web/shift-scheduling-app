@@ -23,6 +23,7 @@ export function createAssignmentEditor({api, expired, identity, parent, onOpen})
   let generation = 0, busy = false, dirty = false, needsRefresh = false;
   let location = "", weekId = "", data = null, roles = [];
   let status, controls, content, popup = null, anchorBox = null;
+  let popupObserver = null;
 
   function say(text) {
     if (status) status.textContent = text;
@@ -30,6 +31,8 @@ export function createAssignmentEditor({api, expired, identity, parent, onOpen})
     if (message) message.textContent = text;
   }
   function dismiss() {
+    popupObserver?.disconnect();
+    popupObserver = null;
     if (popup?.open) popup.close();
     popup?.remove();
     popup = null;
@@ -100,22 +103,38 @@ export function createAssignmentEditor({api, expired, identity, parent, onOpen})
   }
   function positionPopup() {
     if (!popup?.open) return;
-    const box = popup.getBoundingClientRect();
+    const viewport = window.visualViewport;
+    const width = viewport?.width ?? window.innerWidth;
+    const height = viewport?.height ?? window.innerHeight;
+    const originLeft = viewport?.offsetLeft ?? 0;
+    const originTop = viewport?.offsetTop ?? 0;
     const margin = 16, gap = 10;
-    let left = (window.innerWidth - box.width) / 2;
-    let top = (window.innerHeight - box.height) / 2;
-    if (anchorBox && window.innerWidth >= 640) {
-      if (anchorBox.right + gap + box.width <= window.innerWidth - margin) {
+
+    popup.style.boxSizing = "border-box";
+    popup.style.maxWidth = Math.max(1, width - margin * 2) + "px";
+    popup.style.maxHeight = Math.max(1, height - margin * 2) + "px";
+    popup.style.overflowY = "auto";
+
+    const box = popup.getBoundingClientRect();
+    const minimumLeft = originLeft + margin;
+    const minimumTop = originTop + margin;
+    const maximumLeft = Math.max(minimumLeft,
+      originLeft + width - box.width - margin);
+    const maximumTop = Math.max(minimumTop,
+      originTop + height - box.height - margin);
+
+    let left = originLeft + (width - box.width) / 2;
+    let top = originTop + (height - box.height) / 2;
+    if (anchorBox && width >= 640) {
+      if (anchorBox.right + gap + box.width <= originLeft + width - margin) {
         left = anchorBox.right + gap;
-      } else if (anchorBox.left - gap - box.width >= margin) {
+      } else if (anchorBox.left - gap - box.width >= minimumLeft) {
         left = anchorBox.left - gap - box.width;
       }
       top = anchorBox.top;
     }
-    popup.style.left = Math.max(margin,
-      Math.min(left, window.innerWidth - box.width - margin)) + "px";
-    popup.style.top = Math.max(margin,
-      Math.min(top, window.innerHeight - box.height - margin)) + "px";
+    popup.style.left = Math.max(minimumLeft, Math.min(left, maximumLeft)) + "px";
+    popup.style.top = Math.max(minimumTop, Math.min(top, maximumTop)) + "px";
   }
   function closePopup() {
     if (!canClose()) return;
@@ -162,6 +181,8 @@ export function createAssignmentEditor({api, expired, identity, parent, onOpen})
       closePopup();
     });
     popup.showModal();
+    popupObserver = new ResizeObserver(positionPopup);
+    popupObserver.observe(popup);
     positionPopup();
     popup.querySelector("button")?.focus({preventScroll: true});
     requestAnimationFrame(positionPopup);
@@ -281,11 +302,15 @@ export function createAssignmentEditor({api, expired, identity, parent, onOpen})
   };
   window.addEventListener("beforeunload", unload);
   window.addEventListener("resize", positionPopup);
+  window.visualViewport?.addEventListener("resize", positionPopup);
+  window.visualViewport?.addEventListener("scroll", positionPopup);
   return {
     open, reset,
     destroy() {
       window.removeEventListener("beforeunload", unload);
       window.removeEventListener("resize", positionPopup);
+      window.visualViewport?.removeEventListener("resize", positionPopup);
+      window.visualViewport?.removeEventListener("scroll", positionPopup);
       reset();
     }
   };
