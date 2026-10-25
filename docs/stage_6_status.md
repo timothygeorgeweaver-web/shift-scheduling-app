@@ -87,3 +87,16 @@ potential business-demo milestone.
 
 Earlier release-gate lists in this document should be read with this
 revised milestone boundary.
+
+## Local mock-test preparation
+
+Added a read-only smoke check for application health, database connectivity,
+browser assets and static module import delivery.
+
+Added v1_mock_test.md with a full restaurant dataset outline, acceptance
+checklist and findings format. The local build is ready for owner mock testing;
+the mock test itself and final V1 acceptance remain pending.
+
+Previously passing automated checks and recovery evidence remain applicable.
+No full regression rerun was needed for this documentation and smoke-check
+addition.
