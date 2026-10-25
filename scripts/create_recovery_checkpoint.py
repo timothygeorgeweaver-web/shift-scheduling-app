@@ -12,6 +12,7 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from scripts.database_security_inventory import security_inventory
+from scripts.recovery_constraint_definitions import normalize_constraint_definition
 SOURCE = "shift_scheduling"
 CLEAN_ENV = {"PATH": os.defpath, "LANG": "C.UTF-8"}
 
@@ -148,6 +149,11 @@ def fingerprint(database):
         COMMIT;
     """, database))
 
+    for constraint in structure["constraints"] or []:
+        constraint[4] = normalize_constraint_definition(
+            constraint[0], constraint[1], constraint[4],
+        )
+
     return {
         "tables": tables,
         "data": data,
@@ -229,6 +235,11 @@ def main():
     shutil.copyfile(
         ROOT / "scripts/database_security_inventory.py",
         destination / "database_security_inventory.py",
+    )
+
+    shutil.copyfile(
+        ROOT / "scripts/recovery_constraint_definitions.py",
+        destination / "recovery_constraint_definitions.py",
     )
 
     code_archive = destination / "repository.bundle"
