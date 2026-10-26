@@ -56,7 +56,8 @@ def install(version, database, rehearse=False):
         "0051_commit_schedule_publication",
         "0052_published_roster_reads",
         "0053_schedule_publication_status",
-        "0054_assignment_review_trigger_security"
+        "0054_assignment_review_trigger_security",
+        "0055_staff_unavailability"
     ), "Unsupported migration.")
     require(
         database == "shift_scheduling"
@@ -146,6 +147,7 @@ def install(version, database, rehearse=False):
         "0052_published_roster_reads": (set(), []),
         "0053_schedule_publication_status": (set(), []),
         "0054_assignment_review_trigger_security": (set(), []),
+        "0055_staff_unavailability": (set(), []),
         "0032_assignment_rest_policy": ({"location"}, [
             "rest_window_start_minute", "rest_window_end_minute",
             "minimum_rest_minutes",
@@ -244,6 +246,8 @@ def install(version, database, rehearse=False):
         require(actual == expected, "Existing records changed during migration.")
 
     signature = {
+        "0055_staff_unavailability":
+            "scheduling.save_staff_planner(uuid,uuid,date,integer,jsonb)",
         "0054_assignment_review_trigger_security":
             "scheduling.lock_assignment_scope(uuid,uuid,integer,integer,integer)",
         "0053_schedule_publication_status":
