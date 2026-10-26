@@ -9,6 +9,8 @@ export function createStaffManager({api, expired, onBusinessDaySaved = () => {}}
   let generation = 0, scheduleEditorOpen = false;
   let refreshRolloverLock = () => {};
   let refreshRestLock = () => {};
+  let refreshQualificationsLock = () => {};
+  let closeQualifications = () => {};
 
   function element(tag, text = "", className = "") {
     const node = document.createElement(tag);
@@ -19,6 +21,9 @@ export function createStaffManager({api, expired, onBusinessDaySaved = () => {}}
 
   function reset() {
     generation += 1;
+    closeQualifications();
+    closeQualifications = () => {};
+    refreshQualificationsLock = () => {};
     refreshRolloverLock = () => {};
     refreshRestLock = () => {};
     root.replaceChildren();
@@ -102,6 +107,7 @@ export function createStaffManager({api, expired, onBusinessDaySaved = () => {}}
       });
       refreshRolloverLock();
       refreshRestLock();
+      refreshQualificationsLock();
     }
 
     async function run(work) {
@@ -714,6 +720,110 @@ export function createStaffManager({api, expired, onBusinessDaySaved = () => {}}
       dialog.showModal();
     }
 
+    function qualificationDialog(employee, roles, qualifications, anchor) {
+      const dialog = element("dialog", "", "qualification-dialog");
+      dialog.setAttribute("aria-label", "Edit Qualifications");
+      dialog.append(element("h3", "Edit Qualifications"));
+      dialog.append(element("p", employee.display_name));
+      const form = document.createElement("form");
+      const fields = document.createElement("fieldset");
+      fields.append(element("legend", "Job types"));
+      const inputs = new Map();
+      const ordered = [...roles].sort((a, b) =>
+        (a.display_order ?? 0) - (b.display_order ?? 0) ||
+        a.name.localeCompare(b.name)
+      );
+      for (const role of ordered) {
+        const previous = qualifications.find(q =>
+          q.employee_id === employee.id && q.job_role_id === role.id);
+        const input = checkbox(previous?.active ?? false);
+        inputs.set(role.id, {input, previous});
+        fields.append(field(role.name + (role.active ? "" : " · Inactive"), input));
+      }
+      if (!roles.length) fields.append(element("p", "Add a job type first."));
+      const notice = element("p", "", "team-status");
+      notice.setAttribute("role", "status");
+      const saveButton = submit("Save Qualifications");
+      const cancel = element("button", "Cancel", "button secondary");
+      cancel.type = "button";
+      form.append(fields, notice, saveButton, cancel);
+      dialog.append(form);
+      root.append(dialog);
+      let saving = false, blocked = false, closed = false;
+      function updateLock() {
+        if (closed) return;
+        saveButton.disabled = saving || busy || blocked || scheduleEditorOpen;
+        fields.disabled = saving || busy || blocked;
+        cancel.disabled = saving;
+        notice.textContent = scheduleEditorOpen
+          ? "Please close the open planning window before saving."
+          : blocked
+            ? "Save was not confirmed. Close this window and refresh Team."
+            : saving ? "Saving qualifications…" : "";
+      }
+      function finish() {
+        if (closed) return;
+        closed = true;
+        refreshQualificationsLock = () => {};
+        closeQualifications = () => {};
+        dialog.close();
+        dialog.remove();
+        if (anchor.isConnected) anchor.focus();
+      }
+      closeQualifications = finish;
+      refreshQualificationsLock = updateLock;
+      cancel.addEventListener("click", () => {
+        if (!saving) finish();
+      });
+      dialog.addEventListener("cancel", event => {
+        event.preventDefault();
+        if (!saving) finish();
+      });
+      form.addEventListener("submit", event => {
+        event.preventDefault();
+        if (saving || busy || blocked || scheduleEditorOpen || !alive()) return;
+        const body = {roles: roles.map(role => {
+          const {input, previous} = inputs.get(role.id);
+          return {
+            role_id: role.id,
+            expected_revision: previous?.revision ?? 0,
+            active: input.checked
+          };
+        })};
+        saving = true;
+        updateLock();
+        run(async () => {
+          try {
+            await request(base() + "employees/" + employee.id + "/qualifications",
+              "PUT", body);
+            if (!alive()) return;
+            saving = false;
+            finish();
+            content.replaceChildren();
+            await load();
+            status.textContent = "Qualifications saved.";
+          } catch (error) {
+            blocked = true;
+            throw error;
+          } finally {
+            saving = false;
+            updateLock();
+          }
+        });
+      });
+      dialog.showModal();
+      const bounds = anchor.getBoundingClientRect();
+      const width = dialog.getBoundingClientRect().width;
+      const height = dialog.getBoundingClientRect().height;
+      dialog.style.left = Math.max(16, Math.min(
+        bounds.right + 12, window.innerWidth - width - 16
+      )) + "px";
+      dialog.style.top = Math.max(16, Math.min(
+        bounds.top, window.innerHeight - height - 16
+      )) + "px";
+      updateLock();
+    }
+
     async function load() {
       const prefix = base();
       const [employees, roles, qualifications, history] = await Promise.all(
@@ -746,27 +856,14 @@ export function createStaffManager({api, expired, onBusinessDaySaved = () => {}}
             "Activate this employee before creating a sign-in.", "description"));
         }
         const fields = document.createElement("fieldset");
-        fields.append(element("legend", "Qualifications"));
-        fields.append(element("p",
-          "Each checkbox change saves immediately.", "description"));
-        if (!roles.length) fields.append(element("p", "Add a job role first."));
-        for (const role of roles) {
-          const qualification = qualifications.find(q =>
-            q.employee_id === employee.id && q.job_role_id === role.id);
-          const input = checkbox(qualification?.active ?? false);
-          fields.append(field(role.name + (role.active ? "" : " · Inactive role"), input));
-          input.addEventListener("change", () => {
-            const selected = input.checked;
-            input.checked = qualification?.active ?? false;
-            run(() => save(
-              prefix + "employees/" + employee.id + "/qualifications/" + role.id,
-              "PUT", {
-                expected_revision: qualification?.revision ?? 0,
-                active: selected,
-              }
-            ));
-          });
-        }
+        const editQualifications = element(
+          "button", "Edit Qualifications", "button secondary"
+        );
+        editQualifications.type = "button";
+        editQualifications.addEventListener("click", () => {
+          if (!busy) qualificationDialog(employee, roles, qualifications, editQualifications);
+        });
+        fields.append(editQualifications);
         details.append(fields);
         staff.append(details);
       }
@@ -844,6 +941,7 @@ export function createStaffManager({api, expired, onBusinessDaySaved = () => {}}
       scheduleEditorOpen = Boolean(value);
       refreshRolloverLock();
       refreshRestLock();
+      refreshQualificationsLock();
     }
   };
 }

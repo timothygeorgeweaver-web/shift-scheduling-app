@@ -131,68 +131,114 @@ def edit_record(token, location_id, record_id, kind, body):
 
 def set_qualification(token, location_id, employee_id, role_id, body):
     with staff_connection(token, write=True) as conn:
-        location = _location(conn, location_id)
-        employee = conn.execute(
+        return _set_qualification(conn, location_id, employee_id, role_id, body)
+
+
+def _set_qualification(conn, location_id, employee_id, role_id, body):
+    location = _location(conn, location_id)
+    employee = conn.execute(
+        """
+        SELECT id FROM scheduling.employee
+        WHERE id = %s AND location_id = %s FOR UPDATE
+        """,
+        (employee_id, location_id),
+    ).fetchone()
+    role = conn.execute(
+        "SELECT id FROM scheduling.job_role WHERE id = %s AND location_id = %s",
+        (role_id, location_id),
+    ).fetchone()
+    if not employee or not role:
+        raise HTTPException(
+            status_code=404, detail="Employee or role was not found."
+        )
+
+    before = conn.execute(
+        """
+        SELECT employee_id, job_role_id, active, revision
+        FROM scheduling.employee_qualification
+        WHERE location_id = %s AND employee_id = %s AND job_role_id = %s
+        FOR UPDATE
+        """,
+        (location_id, employee_id, role_id),
+    ).fetchone()
+
+    if before is None:
+        if body.expected_revision != 0:
+            _stale()
+        row = conn.execute(
             """
-            SELECT id FROM scheduling.employee
-            WHERE id = %s AND location_id = %s FOR UPDATE
+            INSERT INTO scheduling.employee_qualification(
+                organization_id, location_id, employee_id, job_role_id, active
+            ) VALUES (%s,%s,%s,%s,%s)
+            RETURNING employee_id, job_role_id, active, revision
             """,
+            (
+                location["organization_id"], location_id,
+                employee_id, role_id, body.active,
+            ),
+        ).fetchone()
+        action = "qualification.created"
+    else:
+        if before["revision"] != body.expected_revision:
+            _stale()
+        row = conn.execute(
+            """
+            UPDATE scheduling.employee_qualification
+            SET active = %s, revision = revision + 1
+            WHERE location_id = %s AND employee_id = %s AND job_role_id = %s
+            RETURNING employee_id, job_role_id, active, revision
+            """,
+            (body.active, location_id, employee_id, role_id),
+        ).fetchone()
+        action = "qualification.updated"
+
+    _audit(
+        conn, location, action, "employee_qualification",
+        employee_id, before, row,
+    )
+    return row
+
+
+def save_qualifications(token, location_id, employee_id, body):
+    requested = [item.role_id for item in body.roles]
+    if len(set(requested)) != len(requested):
+        raise HTTPException(status_code=422, detail="Duplicate job type.")
+    with staff_connection(token, write=True) as conn:
+        _location(conn, location_id)
+        employee = conn.execute(
+            "SELECT id FROM scheduling.employee "
+            "WHERE id=%s AND location_id=%s FOR UPDATE",
             (employee_id, location_id),
         ).fetchone()
-        role = conn.execute(
-            "SELECT id FROM scheduling.job_role WHERE id = %s AND location_id = %s",
-            (role_id, location_id),
-        ).fetchone()
-        if not employee or not role:
-            raise HTTPException(
-                status_code=404, detail="Employee or role was not found."
+        if not employee:
+            raise HTTPException(status_code=404, detail="Employee was not found.")
+        roles = conn.execute(
+            "SELECT id FROM scheduling.job_role WHERE location_id=%s",
+            (location_id,),
+        ).fetchall()
+        if set(requested) != {row["id"] for row in roles}:
+            _stale()
+        rows = conn.execute(
+            "SELECT job_role_id,active,revision "
+            "FROM scheduling.employee_qualification "
+            "WHERE location_id=%s AND employee_id=%s FOR UPDATE",
+            (location_id, employee_id),
+        ).fetchall()
+        current = {row["job_role_id"]: row for row in rows}
+        for item in body.roles:
+            before = current.get(item.role_id)
+            if item.expected_revision != (before["revision"] if before else 0):
+                _stale()
+        changed = 0
+        for item in sorted(body.roles, key=lambda item: str(item.role_id)):
+            before = current.get(item.role_id)
+            if item.active == (before["active"] if before else False):
+                continue
+            _set_qualification(
+                conn, location_id, employee_id, item.role_id, item,
             )
-
-        before = conn.execute(
-            """
-            SELECT employee_id, job_role_id, active, revision
-            FROM scheduling.employee_qualification
-            WHERE location_id = %s AND employee_id = %s AND job_role_id = %s
-            FOR UPDATE
-            """,
-            (location_id, employee_id, role_id),
-        ).fetchone()
-
-        if before is None:
-            if body.expected_revision != 0:
-                _stale()
-            row = conn.execute(
-                """
-                INSERT INTO scheduling.employee_qualification(
-                    organization_id, location_id, employee_id, job_role_id, active
-                ) VALUES (%s,%s,%s,%s,%s)
-                RETURNING employee_id, job_role_id, active, revision
-                """,
-                (
-                    location["organization_id"], location_id,
-                    employee_id, role_id, body.active,
-                ),
-            ).fetchone()
-            action = "qualification.created"
-        else:
-            if before["revision"] != body.expected_revision:
-                _stale()
-            row = conn.execute(
-                """
-                UPDATE scheduling.employee_qualification
-                SET active = %s, revision = revision + 1
-                WHERE location_id = %s AND employee_id = %s AND job_role_id = %s
-                RETURNING employee_id, job_role_id, active, revision
-                """,
-                (body.active, location_id, employee_id, role_id),
-            ).fetchone()
-            action = "qualification.updated"
-
-        _audit(
-            conn, location, action, "employee_qualification",
-            employee_id, before, row,
-        )
-        return row
+            changed += 1
+        return {"employee_id": employee_id, "changed": changed}
 
 
 def history(token, location_id, limit):

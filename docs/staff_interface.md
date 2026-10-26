@@ -28,3 +28,14 @@ cannot populate the current screen.
 Browser verification is required for create/edit, qualification changes,
 reactivation, refresh persistence, narrow-screen layout, and sign-out.
 The automated route tests do not execute JavaScript.
+
+### Private assignment-review trigger correction
+
+Qualification changes queue assignment rechecks through an owner-executed
+trigger with a fixed pg_catalog search path. Runtime and PUBLIC execution
+of the trigger function remain revoked, and the application has no direct
+access to the private review-history table.
+
+This corrects the permission failure encountered during qualification saves.
+The migration changes function execution security without changing staff,
+qualifications, assignments or review-history records.

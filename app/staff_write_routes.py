@@ -95,3 +95,28 @@ def reorder_roles(
     token: str = Depends(mutation_token),
 ):
     return staff_writes.reorder_roles(token, location_id, body)
+
+
+from pydantic import StrictBool
+
+
+class QualificationSelection(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    role_id: UUID
+    expected_revision: StrictInt = Field(ge=0, le=2147483646)
+    active: StrictBool
+
+
+class SaveQualifications(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    roles: list[QualificationSelection] = Field(max_length=10000)
+
+
+@router.put("/locations/{location_id}/employees/{employee_id}/qualifications")
+def save_qualifications(
+    location_id: UUID, employee_id: UUID, body: SaveQualifications,
+    token: str = Depends(mutation_token),
+):
+    return staff_writes.save_qualifications(
+        token, location_id, employee_id, body,
+    )

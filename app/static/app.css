@@ -677,3 +677,30 @@ dialog.publication-dialog {
 }
 .publication-dialog select { display: block; width: 100%; margin-top: 8px; }
 dialog.publication-history-dialog { width: min(1100px, calc(100vw - 32px)); }
+
+dialog.qualification-dialog {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  box-sizing: border-box;
+  width: min(420px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+  padding: 20px;
+  border: 1px solid #aebfca;
+  border-radius: 12px;
+  background: #fff;
+  color: #182b3a;
+  box-shadow: 0 12px 42px #18344740;
+}
+.qualification-dialog::backdrop { background: #182b3a26; }
+.qualification-dialog h3 { margin-top: 0; }
+.qualification-dialog label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin: 12px 0;
+}
+.qualification-dialog input[type="checkbox"] { width: auto; }
+.qualification-dialog button { margin: 8px 8px 0 0; }
