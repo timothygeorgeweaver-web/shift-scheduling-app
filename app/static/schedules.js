@@ -518,5 +518,5 @@ export function createScheduleManager({api, expired, onEditorOpen = () => {}}) {
       await load("");
     });
   }
-  return {start, reset, policySaved(locationId) { policyRefresh(locationId); }};
+  return {setStaffPlannerOpen(value) { if (root) root.inert = Boolean(value); }, start, reset, policySaved(locationId) { policyRefresh(locationId); }};
 }

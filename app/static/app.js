@@ -1,6 +1,6 @@
-import {createStaffManager} from "/static/staff.js?v=15";
+import {createStaffManager} from "/static/staff.js?v=16";
 import {createUnavailabilityManager} from "/static/unavailability.js?v=9";
-import {createScheduleManager} from "/static/schedules.js?v=29";
+import {createScheduleManager} from "/static/schedules.js?v=30";
 import {createPublishedScheduleManager} from "/static/published-schedules.js?v=1";
 
 (() => {
@@ -18,7 +18,7 @@ import {createPublishedScheduleManager} from "/static/published-schedules.js?v=1
   const unavailability = createUnavailabilityManager({
     api, expired: () => showLogin("Your session ended. Please sign in again.")
   });
-  const staff = createStaffManager({api, onBusinessDaySaved: locationId => schedules.policySaved(locationId), expired: () => showLogin("Your session ended. Please sign in again.")});
+  const staff = createStaffManager({api, onPlannerOpen: value => schedules.setStaffPlannerOpen(value), onBusinessDaySaved: locationId => schedules.policySaved(locationId), expired: () => showLogin("Your session ended. Please sign in again.")});
 
   function message(id, text) {
     byId(id).textContent = text;

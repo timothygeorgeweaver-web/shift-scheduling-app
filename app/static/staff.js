@@ -1,7 +1,8 @@
 import {confirmAction} from "/static/confirm-dialog.js?v=1";
+import {openStaffUnavailability} from "/static/staff-unavailability.js?v=1";
 "use strict";
 
-export function createStaffManager({api, expired, onBusinessDaySaved = () => {}}) {
+export function createStaffManager({api, expired, onBusinessDaySaved = () => {}, onPlannerOpen = () => {}}) {
   const root = document.createElement("section");
   root.className = "team";
   root.hidden = true;
@@ -11,6 +12,8 @@ export function createStaffManager({api, expired, onBusinessDaySaved = () => {}}
   let refreshRestLock = () => {};
   let refreshQualificationsLock = () => {};
   let closeQualifications = () => {};
+  let closeEmployeePlanner = () => {};
+  let refreshEmployeePlannerLock = () => {};
 
   function element(tag, text = "", className = "") {
     const node = document.createElement(tag);
@@ -22,6 +25,9 @@ export function createStaffManager({api, expired, onBusinessDaySaved = () => {}}
   function reset() {
     generation += 1;
     closeQualifications();
+    closeEmployeePlanner();
+    closeEmployeePlanner = () => {};
+    refreshEmployeePlannerLock = () => {};
     closeQualifications = () => {};
     refreshQualificationsLock = () => {};
     refreshRolloverLock = () => {};
@@ -108,6 +114,7 @@ export function createStaffManager({api, expired, onBusinessDaySaved = () => {}}
       refreshRolloverLock();
       refreshRestLock();
       refreshQualificationsLock();
+      refreshEmployeePlannerLock();
     }
 
     async function run(work) {
@@ -863,7 +870,36 @@ export function createStaffManager({api, expired, onBusinessDaySaved = () => {}}
         editQualifications.addEventListener("click", () => {
           if (!busy) qualificationDialog(employee, roles, qualifications, editQualifications);
         });
-        fields.append(editQualifications);
+        const editAvailability = element(
+          "button", "Edit Unavailability", "button secondary"
+        );
+        editAvailability.type = "button";
+        editAvailability.dataset.employeePlanner = "true";
+        editAvailability.disabled = busy || scheduleEditorOpen;
+        editAvailability.title = scheduleEditorOpen
+          ? "Close the open planning window first." : "";
+        editAvailability.addEventListener("click", () => {
+          if (busy || scheduleEditorOpen || !alive()) return;
+          const position = {left: window.scrollX, top: window.scrollY};
+          content.inert = true;
+          controls.disabled = true;
+          onPlannerOpen(true);
+          closeEmployeePlanner = openStaffUnavailability({
+            parent: root, employee, locationId: location.value,
+            api, identity, expired, isActive: alive,
+            onClose: () => {
+              content.inert = false;
+              controls.disabled = false;
+              closeEmployeePlanner = () => {};
+              onPlannerOpen(false);
+              if (alive() && editAvailability.isConnected) {
+                editAvailability.focus({preventScroll: true});
+                window.scrollTo({...position, behavior: "instant"});
+              }
+            }
+          });
+        });
+        fields.append(editQualifications, editAvailability);
         details.append(fields);
         staff.append(details);
       }
@@ -925,6 +961,13 @@ export function createStaffManager({api, expired, onBusinessDaySaved = () => {}}
       window.scrollTo({...position, behavior: "instant"});
     }
 
+    refreshEmployeePlannerLock = () => {
+      for (const button of content.querySelectorAll("[data-employee-planner]")) {
+        button.disabled = busy || scheduleEditorOpen;
+        button.title = scheduleEditorOpen ? "Close the open planning window first." : "";
+      }
+    };
+
     refresh.addEventListener("click", () => run(async () => {
       await load();
       status.textContent = "Up to date.";
@@ -962,6 +1005,7 @@ export function createStaffManager({api, expired, onBusinessDaySaved = () => {}}
       refreshRolloverLock();
       refreshRestLock();
       refreshQualificationsLock();
+      refreshEmployeePlannerLock();
     }
   };
 }

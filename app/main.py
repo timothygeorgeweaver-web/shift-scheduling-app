@@ -100,3 +100,6 @@ app.include_router(publication_router)
 
 from app.published_schedule_routes import router as published_schedule_router
 app.include_router(published_schedule_router)
+
+from app.staff_planner_routes import router as staff_planner_router
+app.include_router(staff_planner_router)
