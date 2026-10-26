@@ -168,8 +168,7 @@ export function createStaffManager({api, expired, onBusinessDaySaved = () => {}}
         location.selectedOptions[0].textContent =
           saved.business_name + " / " + saved.location_name;
       }
-      // Clear stale revision controls as soon as a write is confirmed.
-      content.replaceChildren();
+      // Keep the current layout while fresh revision controls are loaded.
       status.textContent = "Saved. Refreshing…";
       try {
         await load();
@@ -768,7 +767,7 @@ export function createStaffManager({api, expired, onBusinessDaySaved = () => {}}
         closeQualifications = () => {};
         dialog.close();
         dialog.remove();
-        if (anchor.isConnected) anchor.focus();
+        if (anchor.isConnected) anchor.focus({preventScroll: true});
       }
       closeQualifications = finish;
       refreshQualificationsLock = updateLock;
@@ -799,7 +798,6 @@ export function createStaffManager({api, expired, onBusinessDaySaved = () => {}}
             if (!alive()) return;
             saving = false;
             finish();
-            content.replaceChildren();
             await load();
             status.textContent = "Qualifications saved.";
           } catch (error) {
@@ -842,6 +840,7 @@ export function createStaffManager({api, expired, onBusinessDaySaved = () => {}}
       if (!employees.length) staff.append(element("p", "No employees added yet."));
       for (const employee of employees) {
         const details = document.createElement("details");
+        details.dataset.teamRecord = "employee:" + employee.id;
         details.append(element("summary",
           employee.display_name + (employee.active ? "" : " · Inactive")));
         details.append(editForm(employee, "employees"));
@@ -860,6 +859,7 @@ export function createStaffManager({api, expired, onBusinessDaySaved = () => {}}
           "button", "Edit Qualifications", "button secondary"
         );
         editQualifications.type = "button";
+        editQualifications.dataset.employeeQualifications = employee.id;
         editQualifications.addEventListener("click", () => {
           if (!busy) qualificationDialog(employee, roles, qualifications, editQualifications);
         });
@@ -878,6 +878,7 @@ export function createStaffManager({api, expired, onBusinessDaySaved = () => {}}
       if (!roles.length) jobs.append(element("p", "No job roles added yet."));
       for (const role of roles) {
         const details = document.createElement("details");
+        details.dataset.teamRecord = "role:" + role.id;
         details.append(element("summary",
           role.name + (role.active ? "" : " · Inactive")));
         details.append(editForm(role, "roles"));
@@ -902,7 +903,26 @@ export function createStaffManager({api, expired, onBusinessDaySaved = () => {}}
       if (!history.length) changes.append(element("p", "No changes recorded yet."));
       changes.append(list);
       fragment.append(changes);
+      const key = details => details.dataset.teamRecord ||
+        details.querySelector(":scope > summary")?.textContent;
+      const openDetails = new Set(
+        [...content.querySelectorAll("details[open]")].map(key)
+      );
+      for (const details of fragment.querySelectorAll("details")) {
+        if (openDetails.has(key(details))) details.open = true;
+      }
+      const focusedEmployee =
+        document.activeElement?.dataset?.employeeQualifications;
+      const position = {left: window.scrollX, top: window.scrollY};
       content.replaceChildren(fragment);
+      if (focusedEmployee) {
+        const replacement = [...content.querySelectorAll(
+          "[data-employee-qualifications]"
+        )].find(button =>
+          button.dataset.employeeQualifications === focusedEmployee);
+        replacement?.focus({preventScroll: true});
+      }
+      window.scrollTo({...position, behavior: "instant"});
     }
 
     refresh.addEventListener("click", () => run(async () => {
